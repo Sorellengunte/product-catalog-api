@@ -41,16 +41,13 @@ const Footer: React.FC = () => {
             <h4 className="text-lg font-semibold mb-4">Contact</h4>
             <ul className="space-y-2 text-gray-400">
               <li>contact@shopapp.com</li>
-              <li>+33 1 23 45 67 89</li>
-              <li>Paris, France</li>
+              <li>+237 699178452</li>
+              <li>bafoussam, cameroun</li>
             </ul>
           </div>
         </div>
 
-        {/* Copyright */}
-        <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
-          <p>&copy; {new Date().getFullYear()} ShopApp. Tous droits réservés.</p>
-        </div>
+      
       </div>
     </footer>
   );
