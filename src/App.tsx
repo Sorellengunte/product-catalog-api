@@ -8,6 +8,7 @@ import ProductDetail from './view/productDetail';
 import AddProduct from './view/addproduct';
 
 
+
 function App() {
   return (
     <BrowserRouter>
@@ -17,7 +18,8 @@ function App() {
         <Route path="/products/create" element={<ProductCreate />} />
         <Route path="/products/:id" element={<ProductDetail />} />
         <Route path="/products/edit/:id" element={<ProductEdit />} />
-           <Route path="/add-product" element={<AddProduct />} />
+        <Route path="/add-product" element={<AddProduct />} />
+       
         
       </Routes>
     </BrowserRouter>

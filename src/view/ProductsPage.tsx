@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router'; 
 import Navbar from '../components/navBar'; 
 import Footer from '../components/footer'; 
@@ -15,29 +15,57 @@ const ProductsPage: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const productsPerPage = 12;
 
-  useEffect(() => {
-    loadProducts();
-    loadCategories();
-  }, [currentPage]);
+  // Logs de debug
+  console.log('🔄 ProductsPage - Rendu avec', products.length, 'produits');
+  console.log('📦 localStorage:', JSON.parse(localStorage.getItem('products') || '[]').length, 'produits');
 
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     try {
       setIsLoading(true);
-      const skip = (currentPage - 1) * productsPerPage;
-      const response = await productApi.getAllProducts(productsPerPage, skip);
       
-      // Transformer les données en format SaaS
-      const saasProducts = response.products.map((product: any) => ({
+      // Récupérer depuis localStorage
+      const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
+      console.log('📥 Produits locaux:', localProducts.length);
+      
+      // Récupérer depuis l'API
+      const skip = (currentPage - 1) * productsPerPage;
+      let apiProducts: any[] = [];
+      let total = 0;
+      
+      try {
+        const response = await productApi.getAllProducts(productsPerPage, skip);
+        apiProducts = response.products || [];
+        total = response.total || 0;
+        console.log('🌐 Produits API:', apiProducts.length);
+      } catch (error) {
+        console.warn('API non disponible, utilisation des produits locaux uniquement');
+        apiProducts = [];
+        total = localProducts.length;
+      }
+      
+      // Fusionner les produits : d'abord les locaux, puis ceux de l'API
+      const allProducts = [
+        ...localProducts.map((product: any, index: number) => ({
+          ...product,
+          id: product.id || `local-${Date.now()}-${index}`, // ID unique
+          isLocal: true,
+        })),
+        ...apiProducts
+      ];
+      
+      console.log('📊 Total produits fusionnés:', allProducts.length);
+      
+      // Transformer les données
+      const saasProducts = allProducts.map((product: any) => ({
         ...product,
-        // Ajout des spécificités SaaS
         pricing: {
           monthly: product.price,
-          yearly: product.price * 10, // -20% pour l'annuel
+          yearly: product.price * 10,
           freeTier: product.price < 50,
           trialDays: product.rating > 4 ? 30 : 14
         },
         features: [
-          `${product.brand} Technology`,
+          `${product.brand || 'Premium'} Technology`,
           'Cloud-Based',
           'Real-Time Updates',
           'Multi-Device Access'
@@ -48,13 +76,95 @@ const ProductsPage: React.FC = () => {
       
       setProducts(saasProducts);
       setFilteredProducts(saasProducts);
-      setTotalPages(Math.ceil(response.total / productsPerPage));
+      setTotalPages(Math.ceil((total + localProducts.length) / productsPerPage));
     } catch (error) {
       console.error('Error loading products:', error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentPage]);
+
+  // Charger initialement
+  useEffect(() => {
+    loadProducts();
+    loadCategories();
+  }, [currentPage, loadProducts]);
+
+  // ÉCOUTER TOUS LES ÉVÉNEMENTS DE PRODUITS (MODIFICATION IMPORTANTE)
+  useEffect(() => {
+    console.log('🎯 ProductsPage - Initialisation des écouteurs d\'événements');
+    
+    // Fonction pour rafraîchir
+    const refreshProducts = () => {
+      console.log('🔄 Rafraîchissement déclenché par événement');
+      loadProducts();
+    };
+    
+    // 1. Écouter les changements de localStorage (même onglet)
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'products') {
+        console.log('📦 Événement storage détecté pour key:', event.key);
+        refreshProducts();
+      }
+    };
+    
+    // 2. Écouter les événements personnalisés
+    const handleProductAdded = () => {
+      console.log('➕ Événement productAdded reçu');
+      refreshProducts();
+    };
+    
+    // 3. ÉCOUTER LA SUPPRESSION (AJOUT CRITIQUE)
+    const handleProductDeleted = () => {
+      console.log('🗑️ Événement productDeleted reçu !');
+      refreshProducts();
+    };
+    
+    // 4. Écouter les modifications
+    const handleProductUpdated = () => {
+      console.log('✏️ Événement productUpdated reçu');
+      refreshProducts();
+    };
+    
+    // Ajouter tous les écouteurs
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('productAdded', handleProductAdded);
+    window.addEventListener('productDeleted', handleProductDeleted); // ← ÉCOUTEUR DE SUPPRESSION
+    window.addEventListener('productUpdated', handleProductUpdated);
+    
+    console.log('✅ Tous les écouteurs sont actifs');
+    
+    // Nettoyer tous les écouteurs
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('productAdded', handleProductAdded);
+      window.removeEventListener('productDeleted', handleProductDeleted);
+      window.removeEventListener('productUpdated', handleProductUpdated);
+      console.log('🧹 Écouteurs nettoyés');
+    };
+  }, [loadProducts]);
+
+  // Vérification périodique pour les mises à jour manquées
+  useEffect(() => {
+    const checkForUpdates = () => {
+      const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
+      const localProductIds = localProducts.map((p: any) => p.id);
+      const displayedLocalProductIds = products
+        .filter(p => p.isLocal)
+        .map(p => p.id);
+      
+      // Vérifier s'il y a une différence
+      if (localProducts.length !== displayedLocalProductIds.length) {
+        console.log('⚠️ Incohérence détectée, rechargement...');
+        console.log('LocalStorage:', localProducts.length, 'Displayed:', displayedLocalProductIds.length);
+        loadProducts();
+      }
+    };
+    
+    const interval = setInterval(checkForUpdates, 2000); // Vérifier toutes les 2 secondes
+    
+    return () => clearInterval(interval);
+  }, [products, loadProducts]);
 
   const loadCategories = async () => {
     try {
@@ -62,6 +172,11 @@ const ProductsPage: React.FC = () => {
       setCategories(response);
     } catch (error) {
       console.error('Error loading categories:', error);
+      // Catégories par défaut si l'API échoue
+      setCategories([
+        'smartphones', 'laptops', 'fragrances', 'skincare',
+        'groceries', 'home-decoration', 'furniture'
+      ]);
     }
   };
 
@@ -123,7 +238,6 @@ const ProductsPage: React.FC = () => {
   };
 
   const getSaaSPrice = (price: number) => {
-    // Prix SaaS typiques
     if (price < 20) return { monthly: 9.99, yearly: 99 };
     if (price < 50) return { monthly: 19.99, yearly: 199 };
     if (price < 100) return { monthly: 49.99, yearly: 499 };
@@ -150,12 +264,20 @@ const ProductsPage: React.FC = () => {
       'SOC 2 Certified'
     ];
     
-    // Sélectionner 3-4 features aléatoires
     const randomFeatures = [...specificFeatures]
       .sort(() => Math.random() - 0.5)
       .slice(0, 3);
     
     return [...baseFeatures.slice(0, 1), ...randomFeatures];
+  };
+
+  // Fonction pour forcer le rafraîchissement manuellement
+  const forceRefresh = () => {
+    console.log('🔄 Forcer le rafraîchissement manuel');
+    setIsLoading(true);
+    setTimeout(() => {
+      loadProducts();
+    }, 300);
   };
 
   return (
@@ -171,7 +293,8 @@ const ProductsPage: React.FC = () => {
                 Catalogue de produit
               </h1>
               <p className="text-xl text-blue-100 mb-8">
-                Découvrez notre catalogue de produits</p>
+                Découvrez notre catalogue de produits
+              </p>
             </div>
           </div>
         </section>
@@ -213,6 +336,15 @@ const ProductsPage: React.FC = () => {
                     {getSaaSCategory(category)}
                   </button>
                 ))}
+                
+                {/* Bouton de rafraîchissement manuel (debug) */}
+                <button
+                  onClick={forceRefresh}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                  title="Rafraîchir manuellement"
+                >
+                  🔄
+                </button>
               </div>
             </div>
           </div>
@@ -224,22 +356,27 @@ const ProductsPage: React.FC = () => {
             <div className="flex justify-between items-center mb-8">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">
-                  {selectedCategory ? `${getSaaSCategory(selectedCategory)} Tools` : 'Tous les produits'}
+                  {selectedCategory ? `${getSaaSCategory(selectedCategory)}` : 'Tous les produits'}
                 </h2>
                 <p className="text-slate-600">
-                  {filteredProducts.length} produit disponibles
+                  {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''} disponible{filteredProducts.length > 1 ? 's' : ''}
+                  <span className="ml-2 text-sm text-blue-600">
+                    ({JSON.parse(localStorage.getItem('products') || '[]').length} dans localStorage)
+                  </span>
                 </p>
               </div>
               
-              <Link
-                to="/add-product"
-                className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Ajouter un produit
-              </Link>
+              <div className="flex gap-3">
+                <Link
+                  to="/add-product"
+                  className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Ajouter un produit
+                </Link>
+              </div>
             </div>
 
             {isLoading ? (
@@ -261,24 +398,56 @@ const ProductsPage: React.FC = () => {
                   </svg>
                 </div>
                 <h3 className="text-xl font-bold text-slate-900 mb-2">
-                  Aucun outil trouvé
+                  Aucun produit trouvé
                 </h3>
                 <p className="text-slate-600 mb-6">
-                  Essayez de modifier vos critères de recherche
+                  Essayez de modifier vos critères de recherche ou ajoutez un nouveau produit
                 </p>
-                <button
-                  onClick={() => {
-                    setSearchTerm('');
-                    setSelectedCategory('');
-                    setFilteredProducts(products);
-                  }}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Réinitialiser les filtres
-                </button>
+                <div className="flex gap-4 justify-center">
+                  <button
+                    onClick={() => {
+                      setSearchTerm('');
+                      setSelectedCategory('');
+                      setFilteredProducts(products);
+                    }}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Réinitialiser les filtres
+                  </button>
+                  <Link
+                    to="/add-product"
+                    className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    Ajouter un produit
+                  </Link>
+                  <button
+                    onClick={forceRefresh}
+                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    Rafraîchir
+                  </button>
+                </div>
               </div>
             ) : (
               <>
+                {/* Badge pour produits ajoutés localement */}
+                {filteredProducts.some(p => p.isLocal) && (
+                  <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                      <span className="text-sm text-blue-700">
+                        {filteredProducts.filter(p => p.isLocal).length} produit(s) ajouté(s) localement
+                      </span>
+                      <button
+                        onClick={forceRefresh}
+                        className="ml-auto text-xs text-blue-600 hover:text-blue-800"
+                      >
+                        Actualiser
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                   {filteredProducts.map((product) => {
                     const saasPrice = getSaaSPrice(product.price);
@@ -287,22 +456,33 @@ const ProductsPage: React.FC = () => {
                     return (
                       <div
                         key={product.id}
-                        className="group bg-white rounded-xl border border-slate-200 hover:border-blue-200 hover:shadow-xl transition-all duration-300 overflow-hidden"
+                        className="group bg-white rounded-xl border border-slate-200 hover:border-blue-200 hover:shadow-xl transition-all duration-300 overflow-hidden relative"
                       >
-                       
+                        {/* Badge pour produit local */}
+                        {product.isLocal && (
+                          <div className="absolute top-4 left-4 z-10">
+                            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-bold rounded">
+                              Local
+                            </span>
+                          </div>
+                        )}
+                        
                         {/* Image */}
                         <div className="relative h-48 overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100">
                           <img
-                            src={product.thumbnail}
+                            src={product.thumbnail || 'https://via.placeholder.com/300x200?text=No+Image'}
                             alt={product.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            onError={(e) => {
+                              e.currentTarget.src = 'https://via.placeholder.com/300x200?text=No+Image';
+                            }}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
                         </div>
                         
                         {/* Contenu */}
                         <div className="p-6">
-                          {/* Catégorie SaaS */}
+                          {/* Catégorie */}
                           <div className="flex items-center justify-between mb-2">
                             <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded">
                               {getSaaSCategory(product.category)}
@@ -312,7 +492,7 @@ const ProductsPage: React.FC = () => {
                                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                               </svg>
                               <span className="ml-1 text-sm font-medium text-slate-700">
-                                {product.rating}
+                                {product.rating || 'N/A'}
                               </span>
                             </div>
                           </div>
@@ -320,6 +500,9 @@ const ProductsPage: React.FC = () => {
                           {/* Titre */}
                           <h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-1">
                             {product.title}
+                            {product.isLocal && (
+                              <span className="ml-2 text-xs text-green-600">✓</span>
+                            )}
                           </h3>
                           
                           {/* Description */}
@@ -327,7 +510,7 @@ const ProductsPage: React.FC = () => {
                             {product.description}
                           </p>
                           
-                          {/* Features SaaS */}
+                          {/* Features */}
                           <div className="mb-4">
                             <div className="flex flex-wrap gap-1 mb-2">
                               {saasFeatures.slice(0, 3).map((feature, index) => (
@@ -341,24 +524,26 @@ const ProductsPage: React.FC = () => {
                             </div>
                           </div>
                           
-                          {/* Pricing SaaS */}
+                          {/* Prix */}
                           <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
                             <div className="flex items-baseline justify-between">
                               <div>
                                 <div className="text-2xl font-bold text-slate-900">
-                                  ${saasPrice.monthly}
-                
+                                  ${product.price}
                                 </div>
-                                
                               </div>
-                              
+                              {product.discountPercentage && (
+                                <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded">
+                                  -{product.discountPercentage}%
+                                </span>
+                              )}
                             </div>
                           </div>
                           
                           {/* Actions */}
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-slate-500">
-                              {product.stock} achats
+                              Stock: {product.stock}
                             </span>
                             <div className="flex gap-2">
                               <Link
@@ -426,7 +611,6 @@ const ProductsPage: React.FC = () => {
             )}
           </div>
         </section>
-       
       </main>
 
       <Footer />
