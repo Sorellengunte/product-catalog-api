@@ -168,11 +168,10 @@ const ProductsPage: React.FC = () => {
           <div className="container mx-auto px-4 py-12">
             <div className="max-w-4xl mx-auto text-center">
               <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                Catalogue d'Outils SaaS
+                Catalogue de produit
               </h1>
               <p className="text-xl text-blue-100 mb-8">
-                Découvrez notre sélection exclusive d'outils SaaS premium pour booster votre productivité
-              </p>
+                Découvrez notre catalogue de produits</p>
             </div>
           </div>
         </section>
@@ -190,7 +189,7 @@ const ProductsPage: React.FC = () => {
                   </div>
                   <input
                     type="text"
-                    placeholder="Rechercher un outil SaaS..."
+                    placeholder="Rechercher un produit..."
                     value={searchTerm}
                     onChange={handleSearch}
                     className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -225,10 +224,10 @@ const ProductsPage: React.FC = () => {
             <div className="flex justify-between items-center mb-8">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">
-                  {selectedCategory ? `${getSaaSCategory(selectedCategory)} Tools` : 'Tous les outils SaaS'}
+                  {selectedCategory ? `${getSaaSCategory(selectedCategory)} Tools` : 'Tous les produits'}
                 </h2>
                 <p className="text-slate-600">
-                  {filteredProducts.length} outils disponibles
+                  {filteredProducts.length} produit disponibles
                 </p>
               </div>
               
@@ -239,7 +238,7 @@ const ProductsPage: React.FC = () => {
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                Ajouter un outil
+                Ajouter un produit
               </Link>
             </div>
 
@@ -290,13 +289,7 @@ const ProductsPage: React.FC = () => {
                         key={product.id}
                         className="group bg-white rounded-xl border border-slate-200 hover:border-blue-200 hover:shadow-xl transition-all duration-300 overflow-hidden"
                       >
-                        {/* Badge SaaS */}
-                        <div className="absolute top-4 left-4 z-10">
-                          <span className="px-3 py-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-bold rounded-full">
-                            SaaS
-                          </span>
-                        </div>
-                        
+                       
                         {/* Image */}
                         <div className="relative h-48 overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100">
                           <img
@@ -354,24 +347,18 @@ const ProductsPage: React.FC = () => {
                               <div>
                                 <div className="text-2xl font-bold text-slate-900">
                                   ${saasPrice.monthly}
-                                  <span className="text-sm font-normal text-slate-600">/mois</span>
+                
                                 </div>
-                                <div className="text-sm text-slate-500">
-                                  ${saasPrice.yearly}/an (-20%)
-                                </div>
+                                
                               </div>
-                              {product.price < 50 && (
-                                <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded">
-                                  Free Tier
-                                </span>
-                              )}
+                              
                             </div>
                           </div>
                           
                           {/* Actions */}
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-slate-500">
-                              {product.stock} utilisateurs
+                              {product.stock} achats
                             </span>
                             <div className="flex gap-2">
                               <Link
@@ -439,43 +426,7 @@ const ProductsPage: React.FC = () => {
             )}
           </div>
         </section>
-
-        {/* Info Section SaaS */}
-        <section className="py-16 bg-gradient-to-r from-blue-50 to-purple-50">
-          <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto text-center">
-              <h2 className="text-3xl font-bold text-slate-900 mb-6">
-                Pourquoi choisir des outils SaaS ?
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
-                {[
-                  {
-                    icon: '☁️',
-                    title: 'Cloud-Native',
-                    description: 'Accédez à vos outils depuis n\'importe où, sans installation'
-                  },
-                  {
-                    icon: '🔄',
-                    title: 'Mises à jour automatiques',
-                    description: 'Toujours la dernière version sans effort'
-                  },
-                  {
-                    icon: '💰',
-                    title: 'Abonnement flexible',
-                    description: 'Payez seulement pour ce que vous utilisez'
-                  }
-                ].map((feature, index) => (
-                  <div key={index} className="bg-white/80 p-6 rounded-xl border border-white/20">
-                    <div className="text-3xl mb-4">{feature.icon}</div>
-                    <h3 className="font-bold text-slate-900 mb-2">{feature.title}</h3>
-                    <p className="text-slate-600 text-sm">{feature.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
+       
       </main>
 
       <Footer />
