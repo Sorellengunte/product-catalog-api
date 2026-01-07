@@ -8,7 +8,7 @@ const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Company Info */}
           <div>
-            <h3 className="text-xl font-bold mb-4">ShopApp</h3>
+            <h3 className="text-xl font-bold mb-4">MNS Store</h3>
             <p className="text-gray-400">
               Votre boutique en ligne pour tous vos besoins.
             </p>
@@ -40,7 +40,7 @@ const Footer: React.FC = () => {
           <div>
             <h4 className="text-lg font-semibold mb-4">Contact</h4>
             <ul className="space-y-2 text-gray-400">
-              <li>contact@shopapp.com</li>
+              <li>contact@MNS Store.com</li>
               <li>+237 699178452</li>
               <li>bafoussam, cameroun</li>
             </ul>
