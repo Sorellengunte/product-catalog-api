@@ -1,105 +1,67 @@
-// api/ProductApi.ts
-import axios from 'axios';
-
-const API_BASE_URL = 'https://dummyjson.com';
-const API_ENDPOINT = `${API_BASE_URL}/products`;
+const BASE_URL = 'https://dummyjson.com';
 
 export interface Product {
   id: number;
   title: string;
-  description: string;
   price: number;
-  discountPercentage: number;
+  discountPercentage?: number;
   rating: number;
-  stock: number;
-  brand: string;
+  brand?: string;
   category: string;
   thumbnail: string;
-  images: string[];
+  stock: number;
+  description?: string;
 }
 
-// GET: Récupérer tous les produits
-export const fetchProducts = async (): Promise<Product[]> => {
-  try {
-    const response = await axios.get(API_ENDPOINT);
-    return response.data.products;
-  } catch (error) {
-    console.error('Error fetching products:', error);
-    throw error;
-  }
+export interface ProductsResponse {
+  products: Product[];
+  total: number;
+  skip: number;
+  limit: number;
+}
+
+// Tous les produits
+export const fetchAllProducts = async (page = 1, limit = 20): Promise<ProductsResponse> => {
+  const skip = (page - 1) * limit;
+  const res = await fetch(`${BASE_URL}/products?limit=${limit}&skip=${skip}`);
+  const data: ProductsResponse = await res.json();
+  return data;
 };
 
-// GET: Récupérer un produit par ID
-export const fetchProductById = async (id: number): Promise<Product> => {
-  try {
-    const response = await axios.get(`${API_ENDPOINT}/${id}`);
-    return response.data;
-  } catch (error) {
-    console.error(`Error fetching product ${id}:`, error);
-    throw error;
-  }
+// Toutes les catégories
+export const fetchAllCategories = async (): Promise<string[]> => {
+  const res = await fetch(`${BASE_URL}/products/categories`);
+  const data: string[] = await res.json();
+  return data;
 };
 
-// POST: Créer un nouveau produit
-export const createProduct = async (productData: Omit<Product, 'id'>): Promise<Product> => {
-  try {
-    const response = await axios.post(`${API_ENDPOINT}/add`, productData);
-    return response.data;
-  } catch (error) {
-    console.error('Error creating product:', error);
-    throw error;
-  }
+// Produits par catégorie
+export const fetchProductsByCategory = async (
+  category: string,
+  page = 1,
+  limit = 20
+): Promise<ProductsResponse> => {
+  const skip = (page - 1) * limit;
+  const res = await fetch(`${BASE_URL}/products/category/${category}?limit=${limit}&skip=${skip}`);
+  const data: ProductsResponse = await res.json();
+  return data;
 };
 
-// PUT: Mettre à jour complètement un produit
-export const updateProduct = async (id: number, productData: Partial<Product>): Promise<Product> => {
-  try {
-    const response = await axios.put(`${API_ENDPOINT}/${id}`, productData);
-    return response.data;
-  } catch (error) {
-    console.error(`Error updating product ${id}:`, error);
-    throw error;
-  }
+// Rechercher des produits
+export const searchProducts = async (
+  query: string,
+  page = 1,
+  limit = 20
+): Promise<ProductsResponse> => {
+  const skip = (page - 1) * limit;
+  const res = await fetch(`${BASE_URL}/products/search?q=${encodeURIComponent(query)}&limit=${limit}&skip=${skip}`);
+  const data: ProductsResponse = await res.json();
+  return data;
 };
 
-// PATCH: Mettre à jour partiellement un produit
-export const patchProduct = async (id: number, productData: Partial<Product>): Promise<Product> => {
-  try {
-    const response = await axios.patch(`${API_ENDPOINT}/${id}`, productData);
-    return response.data;
-  } catch (error) {
-    console.error(`Error patching product ${id}:`, error);
-    throw error;
-  }
-};
-
-// DELETE: Supprimer un produit
-// IMPORTANT: L'API dummyjson nécessite de retourner une promesse avec le produit supprimé
-export const deleteProduct = async (id: number): Promise<Product> => {
-  try {
-    const response = await axios.delete(`${API_ENDPOINT}/${id}`);
-    return response.data;
-  } catch (error) {
-    console.error(`Error deleting product ${id}:`, error);
-    throw error;
-  }
-};
-
-// Méthode générique pour les requêtes HTTP
-export const apiRequest = async <T>(
-  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
-  url: string,
-  data?: any
-): Promise<T> => {
-  try {
-    const response = await axios({
-      method,
-      url,
-      data
-    });
-    return response.data;
-  } catch (error) {
-    console.error(`API Error (${method} ${url}):`, error);
-    throw error;
-  }
+// 🔹 Récupérer un produit par ID
+export const fetchProductById = async (id: number | string): Promise<Product> => {
+  const res = await fetch(`${BASE_URL}/products/${id}`);
+  const data: Product = await res.json();
+  return data;
 };
