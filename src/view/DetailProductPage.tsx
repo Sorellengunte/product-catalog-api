@@ -1,4 +1,3 @@
-// src/pages/ProductDetailPage.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
 import { fetchProductById } from '../api/ProductApi';
