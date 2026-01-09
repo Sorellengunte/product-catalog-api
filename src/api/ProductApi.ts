@@ -1,4 +1,5 @@
-const BASE_URL = 'https://dummyjson.com';
+// src/api/ProductApi.ts
+import apiService from './apiservice';
 
 export interface Product {
   id: number;
@@ -20,48 +21,54 @@ export interface ProductsResponse {
   limit: number;
 }
 
-// Tous les produits
-export const fetchAllProducts = async (page = 1, limit = 20): Promise<ProductsResponse> => {
-  const skip = (page - 1) * limit;
-  const res = await fetch(`${BASE_URL}/products?limit=${limit}&skip=${skip}`);
-  const data: ProductsResponse = await res.json();
-  return data;
-};
-
-// Toutes les catégories
-export const fetchAllCategories = async (): Promise<string[]> => {
-  const res = await fetch(`${BASE_URL}/products/categories`);
-  const data: string[] = await res.json();
-  return data;
-};
-
-// Produits par catégorie
-export const fetchProductsByCategory = async (
-  category: string,
-  page = 1,
-  limit = 20
+// Récupérer tous les produits
+export const fetchAllProducts = async (
+  page: number = 1,
+  limit: number = 20
 ): Promise<ProductsResponse> => {
   const skip = (page - 1) * limit;
-  const res = await fetch(`${BASE_URL}/products/category/${category}?limit=${limit}&skip=${skip}`);
-  const data: ProductsResponse = await res.json();
-  return data;
+  const res = await apiService.get<ProductsResponse>('products', { limit: limit.toString(), skip: skip.toString() });
+  return res;
+};
+
+// Récupérer toutes les catégories (uniquement les noms)
+export const fetchAllCategories = async (): Promise<string[]> => {
+  const res = await apiService.get<string[]>('products/categories');
+  // S'assure que tout est bien string
+  return res.map(c => (typeof c === 'string' ? c : String(c)));
+};
+
+// Récupérer les produits par catégorie
+export const fetchProductsByCategory = async (
+  category: string,
+  page: number = 1,
+  limit: number = 20
+): Promise<ProductsResponse> => {
+  const skip = (page - 1) * limit;
+  const res = await apiService.get<ProductsResponse>(`products/category/${encodeURIComponent(category)}`, {
+    limit: limit.toString(),
+    skip: skip.toString(),
+  });
+  return res;
 };
 
 // Rechercher des produits
 export const searchProducts = async (
   query: string,
-  page = 1,
-  limit = 20
+  page: number = 1,
+  limit: number = 20
 ): Promise<ProductsResponse> => {
   const skip = (page - 1) * limit;
-  const res = await fetch(`${BASE_URL}/products/search?q=${encodeURIComponent(query)}&limit=${limit}&skip=${skip}`);
-  const data: ProductsResponse = await res.json();
-  return data;
+  const res = await apiService.get<ProductsResponse>('products/search', {
+    q: query,
+    limit: limit.toString(),
+    skip: skip.toString(),
+  });
+  return res;
 };
 
-// 🔹 Récupérer un produit par ID
+// Récupérer un produit par ID
 export const fetchProductById = async (id: number | string): Promise<Product> => {
-  const res = await fetch(`${BASE_URL}/products/${id}`);
-  const data: Product = await res.json();
-  return data;
+  const res = await apiService.get<Product>(`products/${id}`);
+  return res;
 };
