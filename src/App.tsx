@@ -4,6 +4,7 @@ import ClientAuth from './auth/clientAuth';
 import Home from './view/home';
 import ProductsPage from './view/ProductsPage';
 import ProductDetailPage from './view/DetailProductPage';
+import Panier from './view/panier'; // Importez la page Panier
 import { CartProvider } from './api/CartContext';
 import './App.css';
 
@@ -16,6 +17,7 @@ function App() {
           <Route path="/home" element={<Home />} />
           <Route path="/products" element={<ProductsPage />} />
           <Route path="/product/:id" element={<ProductDetailPage />} />
+          <Route path="/panier" element={<Panier />} /> {/* Ajoutez cette ligne */}
         </Routes>
       </BrowserRouter>
     </CartProvider>
