@@ -1,90 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Navbar from '../components/navBar';
 import Footer from '../components/footer';
 import ProductCard from '../components/productCard';
-import { fetchAllProducts, fetchAllCategories } from '../api/ProductApi';
 import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
-
-interface Product {
-  id: number;
-  title: string;
-  price: number;
-  discountPercentage?: number;
-  rating: number;
-  brand?: string;
-  category: string;
-  thumbnail: string;
-  stock: number;
-}
+import { useProducts } from '../hook/useproducts';
 
 const ProductsPage: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [error, setError] = useState<string | null>(null);
-
-  // Pagination locale
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 12;
-
-  useEffect(() => {
-    const loadInitialData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Récupérer toutes les catégories
-        const categoriesData = await fetchAllCategories();
-        // Forcer les catégories à être des string simples
-        const categoryStrings = categoriesData.map((cat) =>
-          typeof cat === 'string' ? cat : String(cat)
-        );
-        setCategories(categoryStrings);
-
-        // Récupérer tous les produits
-        const response = await fetchAllProducts(1, 1000); // limite haute pour tous les produits
-        setProducts(response.products);
-      } catch (err) {
-        console.error(err);
-        setError('Impossible de charger les produits.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadInitialData();
-  }, []);
-
-  // Filtrage global
-  useEffect(() => {
-    let filtered = [...products];
-
-    if (searchQuery.trim()) {
-      filtered = filtered.filter(
-        (product) =>
-          product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (product.brand && product.brand.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-    }
-
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(
-        (product) => product.category.toLowerCase() === selectedCategory.toLowerCase()
-      );
-    }
-
-    setFilteredProducts(filtered);
-    setCurrentPage(1); // reset page quand on change le filtre
-  }, [searchQuery, selectedCategory, products]);
-
-  // Pagination locale
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentProducts = filteredProducts.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  const {
+    products,
+    categories,
+    loading,
+    error,
+    searchQuery,
+    setSearchQuery,
+    selectedCategory,
+    setSelectedCategory,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+  } = useProducts();
 
   if (loading) {
     return (
@@ -101,9 +35,8 @@ const ProductsPage: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar />
-
       <main className="flex-grow max-w-7xl mx-auto px-4 py-6">
-        {/* Recherche + Sélecteur de catégories */}
+        {/* Recherche + catégories */}
         <div className="mb-6 flex flex-col md:flex-row gap-4 items-start">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -132,15 +65,13 @@ const ProductsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Erreur */}
         {error && (
           <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
             {error}
           </div>
         )}
 
-        {/* Liste des produits */}
-        {currentProducts.length === 0 ? (
+        {products.length === 0 ? (
           <div className="bg-white rounded-lg p-8 text-center">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucun produit trouvé</h3>
             <button
@@ -155,13 +86,13 @@ const ProductsPage: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {currentProducts.map((product) => (
+            {products.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
         )}
 
-        {/* Pagination locale */}
+        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex justify-center items-center gap-2 mt-6">
             <button
@@ -184,7 +115,6 @@ const ProductsPage: React.FC = () => {
           </div>
         )}
       </main>
-
       <Footer />
     </div>
   );
