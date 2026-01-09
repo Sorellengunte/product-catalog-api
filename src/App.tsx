@@ -6,6 +6,7 @@ import './App.css';
 import ProductsPage from './view/ProductsPage';
 import ProductDetailPage from './view/DetailProductPage';
 
+
 function App() {
   return (
     <BrowserRouter>
