@@ -6,8 +6,7 @@ import Home from './view/home';
 import ProductsPage from './view/ProductsPage';
 import ProductDetailPage from './view/DetailProductPage';
 import Panier from './view/panier';
-
-
+import ProfilePage from './view/client/Profile';
 
 import { CartProvider } from './api/CartContext';
 import { AuthProvider } from './auth/AuthContext';
@@ -36,8 +35,6 @@ function App() {
                 </ClientRoute>
               }
             />
-
-
             <Route
               path="/products"
               element={
@@ -46,7 +43,6 @@ function App() {
                 </ClientRoute>
               }
             />
-
             <Route
               path="/product/:id"
               element={
@@ -55,12 +51,20 @@ function App() {
                 </ClientRoute>
               }
             />
-
             <Route
               path="/panier"
               element={
                 <ClientRoute>
                   <Panier />
+                </ClientRoute>
+              }
+            />
+            {/* ROUTE PROFIL */}
+            <Route
+              path="/profil"
+              element={
+                <ClientRoute>
+                  <ProfilePage />
                 </ClientRoute>
               }
             />

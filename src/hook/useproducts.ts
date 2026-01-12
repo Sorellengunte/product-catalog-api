@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { fetchAllProducts, fetchAllCategories } from '../api/ProductApi';
 
 export interface Product {
@@ -6,7 +6,7 @@ export interface Product {
   title: string;
   price: number;
   discountPercentage?: number;
-  rating: number;
+  rating?: number;
   brand?: string;
   category: string;
   thumbnail: string;
@@ -18,27 +18,25 @@ export const useProducts = () => {
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 12;
+  const itemsPerPage = 10;
 
+  // 🔹 Load API
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
-        setError(null);
+        const cats = await fetchAllCategories();
+        setCategories(['all', ...cats]);
 
-        const categoriesData = await fetchAllCategories();
-        setCategories(['all', ...categoriesData]);
-
-        const response = await fetchAllProducts(1, 1000);
-        setProducts(response.products);
-      } catch (err) {
-        console.error(err);
-        setError('Impossible de charger les produits.');
+        const res = await fetchAllProducts(1, 1000);
+        setProducts(res.products);
+      } catch {
+        setError('Erreur de chargement des produits');
       } finally {
         setLoading(false);
       }
@@ -47,41 +45,69 @@ export const useProducts = () => {
     loadData();
   }, []);
 
-  // 🔹 Filtrer par catégorie
-  const filteredByCategory =
-    selectedCategory === 'all'
-      ? products
-      : products.filter(
-          (product) => product.category.toLowerCase() === selectedCategory.toLowerCase()
-        );
+  // 🔹 CRUD CORRIGÉ
+  const addProduct = (product: Omit<Product, 'id'>) => {
+    const newProduct: Product = {
+      ...product,
+      id: Date.now(), // ✅ ID UNIQUE
+    };
+    setProducts((prev) => [newProduct, ...prev]);
+  };
+
+  const editProduct = (updatedProduct: Product) => {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
+    );
+  };
+
+  const deleteProduct = (id: number) => {
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  // 🔹 Filtres
+  const filteredProducts = useMemo(() => {
+    let data = [...products];
+
+    if (selectedCategory !== 'all') {
+      data = data.filter((p) => p.category === selectedCategory);
+    }
+
+    if (searchQuery) {
+      data = data.filter(
+        (p) =>
+          p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.brand?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    return data;
+  }, [products, selectedCategory, searchQuery]);
 
   // 🔹 Pagination
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentPageProducts = filteredByCategory.slice(indexOfFirstItem, indexOfLastItem);
-
-  // 🔹 Recherche sur la page actuelle seulement
-  const searchedProducts = searchQuery
-    ? currentPageProducts.filter(
-        (product) =>
-          product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (product.brand && product.brand.toLowerCase().includes(searchQuery.toLowerCase()))
-      )
-    : currentPageProducts;
-
-  const totalPages = Math.ceil(filteredByCategory.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return {
-    products: searchedProducts,
+    products: paginatedProducts,
     categories,
     loading,
     error,
+
     searchQuery,
     setSearchQuery,
+
     selectedCategory,
     setSelectedCategory,
+
     currentPage,
     setCurrentPage,
     totalPages,
+
+    addProduct,
+    editProduct,
+    deleteProduct,
   };
 };
