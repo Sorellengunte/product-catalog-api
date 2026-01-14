@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 
 import ClientAuth from './auth/clientAuth';
 import Home from './view/home';
@@ -12,7 +12,7 @@ import { CartProvider } from './api/CartContext';
 import { AuthProvider } from './auth/AuthContext';
 import ClientRoute from './auth/ClientRoute';
 import AdminRoute from './auth/AdminRoute';
-
+import ProductFormModal from './components/admin/ProductFormModal';
 import AdminDashboard from './view/admin/AdminDashboard';
 
 import './App.css';
@@ -23,59 +23,27 @@ function App() {
       <CartProvider>
         <BrowserRouter>
           <Routes>
-            {/* LOGIN */}
-            <Route path="/" element={<ClientAuth />} />
+            
+            <Route path="/" element={<Home />} />
+            <Route path="/home" element={<Navigate to="/" replace />} />
 
-            {/* CLIENT */}
-            <Route
-              path="/home"
-              element={
-                <ClientRoute>
-                  <Home />
-                </ClientRoute>
-              }
+            
+            <Route path="/products" element={<ProductsPage />} />
+            <Route path="/product/:id" element={<ProductDetailPage />} />
+             <Route path="/panier" element={<Panier/>}
             />
-            <Route
-              path="/products"
-              element={
-                <ClientRoute>
-                  <ProductsPage />
-                </ClientRoute>
-              }
-            />
-            <Route
-              path="/product/:id"
-              element={
-                <ClientRoute>
-                  <ProductDetailPage />
-                </ClientRoute>
-              }
-            />
-            <Route
-              path="/panier"
-              element={
-                <ClientRoute>
-                  <Panier />
-                </ClientRoute>
-              }
-            />
-            {/* ROUTE PROFIL */}
-            <Route
-              path="/profil"
-              element={
-                <ClientRoute>
-                  <ProfilePage />
-                </ClientRoute>
+            
+            {/* LOGIN - accessible seulement si non connecté */}
+            <Route path="/clientauth" element={<ClientAuth />} />
+
+            {/* PAGES PROTÉGÉES (nécessitent connexion) */}
+           
+            <Route path="/profil" element={ <ClientRoute> <ProfilePage /></ClientRoute>
               }
             />
 
             {/* ADMIN */}
-            <Route
-              path="/admin"
-              element={
-                <AdminRoute>
-                  <AdminDashboard />
-                </AdminRoute>
+            <Route path="/admin" element={<AdminRoute> <AdminDashboard /> </AdminRoute>
               }
             />
           </Routes>

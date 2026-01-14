@@ -23,18 +23,27 @@ export const useProducts = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 12;
 
-  // 🔹 Load API
+  // 🔹 Chargement des données
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
+        
+        // Catégories
         const cats = await fetchAllCategories();
-        setCategories(['all', ...cats]);
+        // S'assurer que ce sont des strings
+        const validCategories = cats
+          .map(cat => String(cat).trim())
+          .filter(cat => cat.length > 0);
+        
+        setCategories(['all', ...validCategories]);
 
-        const res = await fetchAllProducts(1, 1000);
+        // Produits
+        const res = await fetchAllProducts(1, 100);
         setProducts(res.products);
+        
       } catch {
         setError('Erreur de chargement des produits');
       } finally {
@@ -45,11 +54,11 @@ export const useProducts = () => {
     loadData();
   }, []);
 
-  // 🔹 CRUD CORRIGÉ
+  // 🔹 CRUD (inchangé)
   const addProduct = (product: Omit<Product, 'id'>) => {
     const newProduct: Product = {
       ...product,
-      id: Date.now(), // ✅ ID UNIQUE
+      id: Date.now(),
     };
     setProducts((prev) => [newProduct, ...prev]);
   };
@@ -64,19 +73,24 @@ export const useProducts = () => {
     setProducts((prev) => prev.filter((p) => p.id !== id));
   };
 
-  // 🔹 Filtres
+  // 🔹 Filtres simplifiés
   const filteredProducts = useMemo(() => {
     let data = [...products];
 
+    // Filtre catégorie
     if (selectedCategory !== 'all') {
-      data = data.filter((p) => p.category === selectedCategory);
+      data = data.filter(p => 
+        p.category.toLowerCase() === selectedCategory.toLowerCase()
+      );
     }
 
+    // Filtre recherche
     if (searchQuery) {
-      data = data.filter(
-        (p) =>
-          p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.brand?.toLowerCase().includes(searchQuery.toLowerCase())
+      const query = searchQuery.toLowerCase();
+      data = data.filter(p =>
+        p.title.toLowerCase().includes(query) ||
+        p.brand?.toLowerCase().includes(query) ||
+        p.category.toLowerCase().includes(query)
       );
     }
 
@@ -84,28 +98,31 @@ export const useProducts = () => {
   }, [products, selectedCategory, searchQuery]);
 
   // 🔹 Pagination
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
   const paginatedProducts = filteredProducts.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
+  // 🔹 Reset page
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCategory]);
+
   return {
     products: paginatedProducts,
+    filteredProducts,
     categories,
     loading,
     error,
-
     searchQuery,
     setSearchQuery,
-
     selectedCategory,
     setSelectedCategory,
-
     currentPage,
     setCurrentPage,
     totalPages,
-
+    itemsPerPage,
     addProduct,
     editProduct,
     deleteProduct,

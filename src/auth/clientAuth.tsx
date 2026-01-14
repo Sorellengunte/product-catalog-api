@@ -83,14 +83,8 @@ export default function ClientAuth() {
 
           {error && <p className="text-red-500 text-sm">{error}</p>}
 
-          {/* Boutons Se connecter / Annuler */}
+          {/* Boutons Se connecter */}
           <div className="flex justify-between gap-4 mt-2">
-            <Button
-              onClick={handleCancel}
-              className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800"
-            >
-              Annuler
-            </Button>
             <Button
               type="submit"
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"

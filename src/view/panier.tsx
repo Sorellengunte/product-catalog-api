@@ -3,14 +3,24 @@ import { Link, useNavigate } from 'react-router';
 import Navbar from '../components/navBar';
 import Footer from '../components/footer';
 import { useCart } from '../api/CartContext'; 
+import { useAuth } from '../auth/AuthContext'; // Import du contexte d'authentification
 import { Trash2, Plus, Minus, ArrowLeft, ShoppingCart, CreditCard, Check } from 'lucide-react';
 
 const Panier: React.FC = () => {
   const { cart, removeFromCart, updateQuantity, clearCart, getTotalPrice, cartCount } = useCart();
+  const { user } = useAuth(); // Récupérer l'état de connexion
   const navigate = useNavigate();
   const [showSuccess, setShowSuccess] = useState(false);
 
   const handleCheckout = () => {
+    // Vérifier si l'utilisateur est connecté
+    if (!user) {
+      // Rediriger vers la page de connexion
+      navigate('/clientauth');
+      return;
+    }
+    
+    // Si connecté, procéder à la commande
     // Afficher le message de confirmation
     setShowSuccess(true);
     
@@ -61,7 +71,7 @@ const Panier: React.FC = () => {
               <Check className="w-10 h-10 text-green-600" />
             </div>
             <h2 className="text-2xl font-bold text-gray-800 mb-3">Commande envoyée !</h2>
-            <p className="text-gray-600 mb-6">Votre commande a été envoyée avec succès.</p>
+            
             <div className="animate-pulse text-gray-500 text-sm">
               Redirection en cours...
             </div>
@@ -75,6 +85,14 @@ const Panier: React.FC = () => {
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-800">Mon Panier</h1>
             <p className="text-gray-600">{cartCount} article{cartCount > 1 ? 's' : ''}</p>
+            {/* Avertissement si non connecté */}
+            {!user && (
+              <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-yellow-700 text-sm">
+                  <strong>⚠️ Attention :</strong> Vous devez être connecté pour passer commande.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col lg:flex-row gap-8">
@@ -161,13 +179,46 @@ const Panier: React.FC = () => {
                     </div>
                   </div>
                 </div>
+                
+                {/* État de connexion */}
+                {user ? (
+                  <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-green-700 text-sm">
+                      <strong>✅ Connecté :</strong> Vous pouvez passer commande.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-yellow-700 text-sm">
+                      <strong>🔒 Non connecté :</strong> Connectez-vous pour commander.
+                    </p>
+                  </div>
+                )}
+                
                 <button
                   onClick={handleCheckout}
-                  className="w-full py-4 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 flex items-center justify-center gap-3"
+                  className={`w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-3 ${
+                    user 
+                      ? 'bg-green-600 hover:bg-green-700' 
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
                 >
                   <CreditCard className="w-5 h-5" />
-                  Commander
+                  {user ? 'Commander' : 'Se connecter pour commander'}
                 </button>
+                
+                {/* Lien vers la connexion si non connecté */}
+                {!user && (
+                  <p className="text-center text-gray-600 text-sm mt-4">
+                    Pas encore de compte ?{' '}
+                    <button 
+                      onClick={() => navigate('/login')}
+                      className="text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      Créer un compte
+                    </button>
+                  </p>
+                )}
               </div>
             </div>
           </div>
