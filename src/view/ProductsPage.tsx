@@ -2,10 +2,38 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '../components/navBar';
 import Footer from '../components/footer';
 import ProductCard from '../components/productCard';
-import { Search, Filter, ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
+import { Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useProducts } from '../hook/useproducts';
 import { useCart } from '../api/CartContext';
 import { useCategories } from '../hook/usecategories';
+
+// Type du produit tel que utilisé dans ProductsPage
+interface Product {
+  id: number;
+  title: string;
+  description: string;
+  price: number;
+  discountPercentage?: number;
+  rating?: number;
+  stock?: number;
+  brand?: string;
+  category: string;
+  thumbnail: string;
+  images?: string[];
+}
+
+// Type attendu par ProductCard (obligatoire)
+interface ProductCardType {
+  id: number;
+  title: string;
+  price: number;
+  discountPercentage: number;
+  rating: number;
+  brand: string;
+  category: string;
+  thumbnail: string;
+  stock: number;
+}
 
 const ProductsPage: React.FC = () => {
   const { products, loading, error, searchQuery, setSearchQuery, currentPage, setCurrentPage, totalPages } = useProducts();
@@ -21,7 +49,7 @@ const ProductsPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [localSearch, setSearchQuery]);
 
-  const handleAddToCart = (product: any, quantity: number) => {
+  const handleAddToCart = (product: Product, quantity: number) => {
     addToCart(product, quantity);
     setAddedProduct(product.title);
     setShowNotification(true);
@@ -36,7 +64,7 @@ const ProductsPage: React.FC = () => {
     ? filteredProducts
     : filteredProducts.filter(p => 
         p.title?.toLowerCase().includes(localSearch.toLowerCase()) ||
-        p.description?.toLowerCase().includes(localSearch.toLowerCase())
+        (p.description && p.description.toLowerCase().includes(localSearch.toLowerCase()))
       );
 
   if (loading) {
@@ -77,19 +105,19 @@ const ProductsPage: React.FC = () => {
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6 md:py-8 pt-20 md:pt-24">
         {/* Header */}
-       <div className="mb-10">
-  <div className="w-full bg-gradient-to-r from-indigo-600 via-blue-600 to-blue-500 py-12 md:py-3 px-10 shadow-lg">
-    <div className="max-w-4xl mx-auto text-center">
-      <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-        Nos Produits
-      </h1>
-      <p className="text-xl text-white/90 md:text-2xl">
-        Découvrez notre collection exclusive
-      </p>
-      <div className="w-20 h-1 bg-gradient-to-r from-cyan-300 to-pink-300 rounded-full mx-auto mt-6"></div>
-    </div>
-  </div>
-</div>
+        <div className="mb-10">
+          <div className="w-full bg-gradient-to-r from-indigo-600 via-blue-600 to-blue-500 py-12 md:py-3 px-10 shadow-lg">
+            <div className="max-w-4xl mx-auto text-center">
+              <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+                Nos Produits
+              </h1>
+              <p className="text-xl text-white/90 md:text-2xl">
+                Découvrez notre collection exclusive
+              </p>
+              <div className="w-20 h-1 bg-gradient-to-r from-cyan-300 to-pink-300 rounded-full mx-auto mt-6"></div>
+            </div>
+          </div>
+        </div>
 
         {/* Filtres */}
         <div className="mb-8">
@@ -187,11 +215,25 @@ const ProductsPage: React.FC = () => {
         ) : (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
-              {searchedProducts.map(product => (
-                <div key={product.id} className="transform transition-transform hover:-translate-y-1">
-                  <ProductCard product={product} addToCart={handleAddToCart} />
-                </div>
-              ))}
+              {searchedProducts.map(product => {
+                // On mappe le produit pour correspondre au type attendu par ProductCard
+                const mappedProduct: ProductCardType = {
+                  id: product.id,
+                  title: product.title,
+                  price: product.price,
+                  discountPercentage: product.discountPercentage || 0,
+                  rating: product.rating || 0,
+                  brand: product.brand || '',
+                  category: product.category,
+                  thumbnail: product.thumbnail,
+                  stock: product.stock || 0,
+                };
+                return (
+                  <div key={product.id} className="transform transition-transform hover:-translate-y-1">
+                    <ProductCard product={mappedProduct} addToCart={handleAddToCart} />
+                  </div>
+                );
+              })}
             </div>
 
             {/* Pagination */}

@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 
 import ClientAuth from './auth/clientAuth';
@@ -12,7 +11,7 @@ import { CartProvider } from './api/CartContext';
 import { AuthProvider } from './auth/AuthContext';
 import ClientRoute from './auth/ClientRoute';
 import AdminRoute from './auth/AdminRoute';
-import ProductFormModal from './components/admin/ProductFormModal';
+;
 import AdminDashboard from './view/admin/AdminDashboard';
 
 import './App.css';
