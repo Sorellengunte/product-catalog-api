@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import ClientAuth from './auth/clientAuth';
 import Home from './view/home';
@@ -13,6 +12,11 @@ import { CartProvider } from './api/CartContext';
 import { AuthProvider } from './auth/AuthContext';
 import ClientRoute from './auth/ClientRoute';
 import AdminRoute from './auth/AdminRoute';
+<<<<<<< HEAD
+=======
+;
+import AdminDashboard from './view/admin/AdminDashboard';
+>>>>>>> ffb347138f66b59f211acb6a9153d71e1b2d9c38
 
 import './App.css';
 

@@ -28,26 +28,9 @@ export default function ClientAuth() {
     }
   };
 
-  const handleQuickLogin = async (type: "CLIENT" | "ADMIN") => {
-    setError("");
-    try {
-      let loggedUser;
-      if (type === "CLIENT") loggedUser = await login("emilys", "emilyspass");
-      else loggedUser = await login("admin", "admin123");
 
-      if (loggedUser.role === "ADMIN") navigate("/admin");
-      else navigate("/home");
-    } catch (err) {
-      console.error(err);
-      setError("Login rapide échoué !");
-    }
-  };
 
-  const handleCancel = () => {
-    setUsername("");
-    setPassword("");
-    setError("");
-  };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-blue-100 px-4">

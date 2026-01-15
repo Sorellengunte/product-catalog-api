@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import  { useState } from "react";
 import Navbar from "../../components/navBar";
 import Footer from "../../components/footer";
 import Button from "../../components/Button";
@@ -8,7 +8,7 @@ import { ShoppingCart, CreditCard, Check } from "lucide-react";
 import { useNavigate } from "react-router";
 
 export default function ProfileDashboard() {
-  const { user, logout } = useAuth();
+  const { user,} = useAuth();
   const { cart, getTotalPrice, clearCart } = useCart();
   const navigate = useNavigate();
   const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false);

@@ -651,7 +651,7 @@ const HomePage: React.FC = () => {
           overflow: hidden;
         }
       `}</style>
-    </div>
+   </div>
   );
 };
 
