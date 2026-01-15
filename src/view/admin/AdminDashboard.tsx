@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router'; // Correction ici
 import {
   UserCircleIcon,
   ChartBarIcon,
@@ -14,7 +15,6 @@ import {
 import { useAuth } from '../../auth/AuthContext';
 import { useProducts } from '../../hook/useproducts';
 import { useCategories } from '../../hook/usecategories';
-import ProductFormModal from '../../components/admin/ProductFormModal';
 import ProductsTable from '../../components/admin/ProductsTable';
 
 interface Product {
@@ -27,6 +27,7 @@ interface Product {
   brand?: string;
   rating?: number;
   discountPercentage?: number;
+  description?: string;
 }
 
 interface Notification {
@@ -39,7 +40,6 @@ interface Notification {
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
   
-  // Hook pour les produits
   const {
     products,
     loading: productsLoading,
@@ -54,7 +54,6 @@ export default function AdminDashboard() {
     deleteProduct,
   } = useProducts();
 
-  // Hook pour les catégories (remplace l'ancien useProducts pour les catégories)
   const {
     categories,
     selectedCategory,
@@ -64,20 +63,6 @@ export default function AdminDashboard() {
     resetCategory,
   } = useCategories();
 
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [formData, setFormData] = useState<Product>({
-    id: 0,
-    title: '',
-    price: 0,
-    stock: 0,
-    category: '',
-    thumbnail: '',
-    brand: '',
-    rating: 0,
-    discountPercentage: 0,
-  });
-  
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{open: boolean; productId: number | null; productTitle: string}>({
     open: false,
@@ -85,22 +70,18 @@ export default function AdminDashboard() {
     productTitle: ''
   });
 
-  // Fonction pour formater le nom d'affichage des catégories
   const formatCategoryName = (category: string): string => {
     if (category === 'all') return 'Toutes les catégories';
     
-    // S'assurer que c'est une string
     const categoryStr = typeof category === 'string' ? category : String(category);
     
-    // Remplacer les tirets par des espaces et mettre en majuscule chaque mot
     return categoryStr
-      .replace(/[-_]/g, ' ') // Remplacer les tirets et underscores par des espaces
-      .split(' ') // Séparer les mots
+      .replace(/[-_]/g, ' ')
+      .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(' ');
   };
 
-  // Filtrer les produits par catégorie sélectionnée
   const filteredProducts = selectedCategory === 'all' 
     ? products 
     : products.filter(product => {
@@ -108,72 +89,28 @@ export default function AdminDashboard() {
         return productCategory === selectedCategory.toLowerCase();
       });
 
-  // Filtrer par recherche (au sein des produits filtrés par catégorie)
   const searchedProducts = searchQuery.trim() === ''
     ? filteredProducts
     : filteredProducts.filter(product => {
         const title = product.title?.toLowerCase?.() || '';
         const description = product.description?.toLowerCase?.() || '';
         const category = product.category?.toLowerCase?.() || '';
+        const brand = product.brand?.toLowerCase?.() || '';
         const searchTerm = searchQuery.toLowerCase();
         
         return title.includes(searchTerm) || 
                description.includes(searchTerm) || 
-               category.includes(searchTerm);
+               category.includes(searchTerm) ||
+               brand.includes(searchTerm);
       });
-
-  const openAddModal = () => {
-    setFormData({
-      id: 0,
-      title: '',
-      price: 0,
-      stock: 0,
-      category: '',
-      thumbnail: '',
-      brand: '',
-      rating: 0,
-      discountPercentage: 0,
-    });
-    setEditingId(null);
-    setModalOpen(true);
-  };
-
-  const openEditModal = (product: Product) => {
-    setFormData(product);
-    setEditingId(product.id);
-    setModalOpen(true);
-  };
-
-  const handleFormChange = (field: keyof Product, value: string | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
 
   const addNotification = (type: Notification['type'], title: string, message: string) => {
     const id = Date.now();
     setNotifications(prev => [...prev, { id, type, title, message }]);
     
-    // Auto-remove notification after 5 seconds
     setTimeout(() => {
       setNotifications(prev => prev.filter(notif => notif.id !== id));
     }, 5000);
-  };
-
-  const handleSubmit = () => {
-    if (!formData.title || !formData.category || !formData.thumbnail) {
-      addNotification('error', 'Champs manquants', 'Veuillez remplir tous les champs obligatoires');
-      return;
-    }
-
-    if (editingId !== null) {
-      editProduct(formData);
-      addNotification('success', 'Produit modifié', `${formData.title} a été modifié avec succès`);
-    } else {
-      const { id, ...data } = formData;
-      addProduct(data);
-      addNotification('success', 'Produit ajouté', `${formData.title} a été ajouté avec succès`);
-    }
-
-    setModalOpen(false);
   };
 
   const confirmDelete = (product: Product) => {
@@ -210,8 +147,22 @@ export default function AdminDashboard() {
       'skincare': 'bg-green-100 text-green-800',
       'groceries': 'bg-amber-100 text-amber-800',
       'home-decoration': 'bg-orange-100 text-orange-800',
+      'furniture': 'bg-indigo-100 text-indigo-800',
+      'tops': 'bg-teal-100 text-teal-800',
+      'womens-dresses': 'bg-rose-100 text-rose-800',
+      'womens-shoes': 'bg-fuchsia-100 text-fuchsia-800',
+      'mens-shirts': 'bg-cyan-100 text-cyan-800',
+      'mens-shoes': 'bg-lime-100 text-lime-800',
+      'mens-watches': 'bg-emerald-100 text-emerald-800',
+      'womens-watches': 'bg-violet-100 text-violet-800',
+      'womens-bags': 'bg-amber-100 text-amber-800',
+      'womens-jewellery': 'bg-pink-100 text-pink-800',
+      'sunglasses': 'bg-sky-100 text-sky-800',
+      'automotive': 'bg-slate-100 text-slate-800',
+      'motorcycle': 'bg-stone-100 text-stone-800',
+      'lighting': 'bg-yellow-100 text-yellow-800',
     };
-    return colors[category] || 'bg-gray-100 text-gray-800';
+    return colors[category.toLowerCase()] || 'bg-gray-100 text-gray-800';
   };
 
   const getNotificationColor = (type: Notification['type']) => {
@@ -234,9 +185,10 @@ export default function AdminDashboard() {
     }
   };
 
-  // États de chargement combinés
   const loading = productsLoading || categoriesLoading;
   const error = productsError || categoriesError;
+
+  
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-gray-50 to-gray-100">
@@ -309,17 +261,31 @@ export default function AdminDashboard() {
           <span className="font-medium">Produits</span>
         </div>
         
-        <button
-          onClick={logout}
-          className="flex items-center gap-3 w-full p-3 text-red-200 hover:bg-red-500/20 rounded-xl transition-all"
-        >
-          <ArrowRightOnRectangleIcon className="h-5 w-5" />
-          <span>Déconnexion</span>
-        </button>
+        <div className="mt-auto pt-6 border-t border-blue-600/30">
+          <div className="flex items-center gap-3 mb-4 p-3">
+            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+              <span className="font-medium text-sm">
+                {user?.username?.charAt(0).toUpperCase() || 'A'}
+              </span>
+            </div>
+            <div>
+              <p className="font-medium">{user?.username || 'Admin'}</p>
+              <p className="text-blue-200 text-sm">Administrateur</p>
+            </div>
+          </div>
+          
+          <button
+            onClick={logout}
+            className="flex items-center gap-3 w-full p-3 text-red-200 hover:bg-red-500/20 rounded-xl transition-all"
+          >
+            <ArrowRightOnRectangleIcon className="h-5 w-5" />
+            <span>Déconnexion</span>
+          </button>
+        </div>
       </aside>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-6 overflow-auto">
         {/* HEADER */}
         <header className="flex justify-between items-center mb-8">
           <div>
@@ -352,11 +318,10 @@ export default function AdminDashboard() {
                 value={selectedCategory}
                 onChange={(e) => {
                   selectCategory(e.target.value);
-                  setCurrentPage(1); // Réinitialiser la pagination
+                  setCurrentPage(1);
                 }}
               >
                 {categories.map((cat) => {
-                  // S'assurer que cat est une string
                   const categoryValue = typeof cat === 'string' ? cat : String(cat);
                   return (
                     <option key={categoryValue} value={categoryValue}>
@@ -376,16 +341,15 @@ export default function AdminDashboard() {
               )}
             </div>
             
-            <button
-              onClick={openAddModal}
-              className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white px-6 py-3 rounded-xl font-medium hover:from-blue-700 hover:to-blue-600 transition-all shadow-md hover:shadow-lg"
+            <Link
+              to="/admin/products/new"
+              className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white px-6 py-3 rounded-xl font-medium hover:from-blue-700 hover:to-blue-600 transition-all shadow-md hover:shadow-lg"
             >
               <PlusIcon className="h-5 w-5" />
-              Ajouter produit
-            </button>
+              Ajouter un produit
+            </Link>
           </div>
 
-          {/* Info sur les filtres actifs */}
           <div className="flex flex-wrap items-center gap-2 mt-4">
             {selectedCategory !== 'all' && (
               <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-3 py-1.5 rounded-full text-sm font-medium">
@@ -417,15 +381,9 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Messages d'erreur */}
-        {productsError && (
+        {error && (
           <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg">
-            <p className="text-red-700">Erreur produits: {productsError}</p>
-          </div>
-        )}
-        {categoriesError && (
-          <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg">
-            <p className="text-red-700">Erreur catégories: {categoriesError}</p>
+            <p className="text-red-700">Erreur: {productsError || categoriesError}</p>
           </div>
         )}
 
@@ -439,7 +397,6 @@ export default function AdminDashboard() {
             totalPages={totalPages}
             getStockColor={getStockColor}
             getCategoryColor={getCategoryColor}
-            onEdit={openEditModal}
             onDelete={confirmDelete}
           />
         </div>
@@ -449,7 +406,7 @@ export default function AdminDashboard() {
           <div className="flex justify-center items-center gap-4 mt-6">
             <button
               disabled={currentPage === 1}
-              onClick={() => setCurrentPage(currentPage - 1)}
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               <ChevronLeftIcon className="h-4 w-4" />
@@ -461,8 +418,8 @@ export default function AdminDashboard() {
                 let pageNum = i + 1;
                 if (totalPages > 5 && currentPage > 3) {
                   pageNum = currentPage - 2 + i;
+                  if (pageNum > totalPages) return null;
                 }
-                if (pageNum > totalPages) return null;
                 
                 return (
                   <button
@@ -477,12 +434,12 @@ export default function AdminDashboard() {
                     {pageNum}
                   </button>
                 );
-              })}
+              }).filter(Boolean)}
             </div>
             
             <button
               disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage(currentPage + 1)}
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
               className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               Suivant
@@ -491,23 +448,10 @@ export default function AdminDashboard() {
           </div>
         )}
       </main>
-
-      {/* PRODUCT FORM MODAL */}
-      <ProductFormModal
-        isOpen={modalOpen}
-        editingId={editingId}
-        formData={formData}
-        categories={categories.filter(cat => cat !== 'all')} // Enlever "all" pour le formulaire
-        onClose={() => setModalOpen(false)}
-        onSubmit={handleSubmit}
-        onFormChange={handleFormChange}
-        formatCategoryName={formatCategoryName}
-      />
     </div>
   );
 }
 
-// Animation CSS
 const styles = `
 @keyframes slide-in {
   from {
@@ -524,7 +468,6 @@ const styles = `
 }
 `;
 
-// Ajout des styles
 if (typeof document !== 'undefined') {
   const styleSheet = document.createElement('style');
   styleSheet.innerText = styles;
