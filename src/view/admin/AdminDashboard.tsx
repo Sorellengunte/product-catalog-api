@@ -397,6 +397,7 @@ export default function AdminDashboard() {
             totalPages={totalPages}
             getStockColor={getStockColor}
             getCategoryColor={getCategoryColor}
+
             onDelete={confirmDelete}
           />
         </div>

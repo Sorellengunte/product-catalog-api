@@ -15,7 +15,7 @@ interface Product {
 }
 
 interface ProductsTableProps {
-  products: Product[];
+ products: Product[];
   loading: boolean;
   error: string | null;
   currentPage: number;
@@ -33,6 +33,7 @@ export default function ProductsTable({
   totalPages,
   getStockColor,
   getCategoryColor,
+
   onDelete,
 }: ProductsTableProps) {
   if (loading) {
@@ -134,6 +135,7 @@ export default function ProductsTable({
                     <Link
                       to={`/admin/products/edit/${product.id}`}
                       className="flex items-center gap-1 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+                      
                     >
                       <PencilIcon className="h-4 w-4" />
                       <span className="text-sm font-medium">Modifier</span>
