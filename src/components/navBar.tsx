@@ -15,27 +15,27 @@ const Navbar: React.FC = () => {
   ];
 
   return (
-    <nav className="sticky top-0 z-50 bg-gray backdrop-blur-sm  shadow-sm">
+    <nav className="sticky top-0 z-50 bg-white shadow-md">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           
           {/* Logo */}
           <Link to="/home" className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-blue-500 rounded-xl flex items-center justify-center shadow-md">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-blue-500 rounded-xl flex items-center justify-center shadow-sm">
               <ShoppingBagIcon className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">
+            <span className="text-xl font-bold text-gray-800">
               MNS Store
             </span>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-2">
             {menuItems.map((item) => (
               <Link 
                 key={item.to} 
                 to={item.to} 
-                className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200"
               >
                 <item.icon className="w-5 h-5" />
                 <span>{item.label}</span>
@@ -45,12 +45,12 @@ const Navbar: React.FC = () => {
             {/* Cart */}
             <Link 
               to="/panier" 
-              className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors relative"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 relative"
             >
               <div className="relative">
                 <ShoppingCartIcon className="w-5 h-5" />
                 {cartCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-bounce">
                     {cartCount}
                   </span>
                 )}
@@ -60,17 +60,17 @@ const Navbar: React.FC = () => {
 
             {/* User Section */}
             {user ? (
-              <div className="flex items-center gap-2 pl-4 border-l">
+              <div className="flex items-center gap-2 pl-4 border-l border-gray-200">
                 <Link 
                   to="/profil" 
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all duration-200"
                 >
                   <UserIcon className="w-5 h-5" />
                   <span>Compte</span>
                 </Link>
                 <button
                   onClick={logout}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-white hover:bg-red-500 bg-red-600 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200"
                 >
                   <ArrowRightOnRectangleIcon className="w-5 h-5" />
                   <span>Déconnexion</span>
@@ -79,7 +79,7 @@ const Navbar: React.FC = () => {
             ) : (
               <Link 
                 to="/clientAuth" 
-                className="flex items-center gap-2 px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                className="flex items-center gap-2 px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200 shadow-sm"
               >
                 <UserIcon className="w-5 h-5" />
                 <span>Connexion</span>
@@ -90,7 +90,7 @@ const Navbar: React.FC = () => {
           {/* Mobile Menu Button */}
           <button 
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden p-2 rounded-lg hover:bg-gray-100"
+            className="md:hidden p-2 rounded-lg text-gray-700 hover:bg-gray-100"
           >
             {isMenuOpen ? <XMarkIcon className="w-6 h-6" /> : <Bars3Icon className="w-6 h-6" />}
           </button>
@@ -98,12 +98,12 @@ const Navbar: React.FC = () => {
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 border-t space-y-2">
+          <div className="md:hidden py-4 border-t border-gray-100 space-y-2 bg-white rounded-b-lg shadow-lg">
             {menuItems.map((item) => (
               <Link 
                 key={item.to} 
                 to={item.to} 
-                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200"
                 onClick={() => setIsMenuOpen(false)}
               >
                 <item.icon className="w-5 h-5" />
@@ -113,7 +113,7 @@ const Navbar: React.FC = () => {
             
             <Link 
               to="/panier" 
-              className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors"
+              className="flex items-center justify-between px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200"
               onClick={() => setIsMenuOpen(false)}
             >
               <div className="flex items-center gap-3">
@@ -121,7 +121,7 @@ const Navbar: React.FC = () => {
                 <span>Panier</span>
               </div>
               {cartCount > 0 && (
-                <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1">
+                <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 animate-bounce">
                   {cartCount}
                 </span>
               )}
@@ -132,7 +132,7 @@ const Navbar: React.FC = () => {
               <>
                 <Link 
                   to="/profil" 
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <UserIcon className="w-5 h-5" />
@@ -140,7 +140,7 @@ const Navbar: React.FC = () => {
                 </Link>
                 <button
                   onClick={() => { logout(); setIsMenuOpen(false); }}
-                  className="flex items-center gap-3 w-full text-left px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                  className="flex items-center gap-3 w-full text-left px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-all duration-200"
                 >
                   <ArrowRightOnRectangleIcon className="w-5 h-5" />
                   <span>Déconnexion</span>
@@ -149,7 +149,7 @@ const Navbar: React.FC = () => {
             ) : (
               <Link 
                 to="/clientAuth" 
-                className="flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                className="flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200"
                 onClick={() => setIsMenuOpen(false)}
               >
                 <UserIcon className="w-5 h-5" />

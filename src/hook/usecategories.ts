@@ -6,7 +6,6 @@ export const useCategories = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
 
-  // Charger les catégories depuis l'API
   const fetchCategories = async () => {
     try {
       setLoading(true);
@@ -16,16 +15,13 @@ export const useCategories = () => {
       
       const data = await response.json();
       
-      // Formater en tableau de strings
       const categoryList = data.map((cat: any) => {
-        // S'assurer qu'on a toujours une string
         if (typeof cat === 'string') return cat;
-        // Si c'est un objet, prendre le slug ou le name
         if (cat && typeof cat === 'object') {
           return cat.slug || cat.name || String(cat);
         }
         return String(cat);
-      }).filter((cat: string) => cat && cat.trim() !== ''); // Filtrer les valeurs vides
+      }).filter((cat: string) => cat && cat.trim() !== '');
       
       setCategories(['all', ...categoryList]);
       setError(null);
@@ -38,23 +34,34 @@ export const useCategories = () => {
     }
   };
 
-  // Charger au démarrage
   useEffect(() => {
     fetchCategories();
   }, []);
 
-  // Fonction pour rafraîchir
   const refreshCategories = () => {
     fetchCategories();
   };
 
-  // Fonction pour filtrer des produits par catégorie
   const filterProductsByCategory = (products: any[], category: string) => {
     if (category === 'all' || !category) return products;
     return products.filter(product => {
       const productCategory = product.category?.toLowerCase?.() || '';
       return productCategory === category.toLowerCase();
     });
+  };
+
+  // Fonction pour formater le nom des catégories
+  const formatCategoryName = (category: string): string => {
+    if (!category || category.trim() === '') return '';
+    if (category === 'all') return 'Toutes catégories';
+    
+    const categoryStr = typeof category === 'string' ? category : String(category);
+    
+    return categoryStr
+      .replace(/[-_]/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
   };
 
   return {
@@ -67,5 +74,6 @@ export const useCategories = () => {
     refreshCategories,
     selectCategory: (category: string) => setSelectedCategory(category),
     resetCategory: () => setSelectedCategory('all'),
+    formatCategoryName,
   };
 };
