@@ -18,7 +18,6 @@ export interface Product {
 }
 
 export const useProducts = () => {
-  const [apiProducts, setApiProducts] = useState<Product[]>([]);
   const [localProducts, setLocalProducts] = useState<Product[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,13 +32,13 @@ export const useProducts = () => {
       const response = await fetch('https://dummyjson.com/products?limit=100');
       const data = await response.json();
       
-      // 🔴 Transformation des produits API avec leurs catégories originales
+      // Transformation des produits API avec leurs catégories originales
       const apiProductsData = data.products.map((product: any) => ({
         id: product.id,
         title: product.title,
         price: product.price,
         stock: product.stock,
-        category: product.category, // 🔴 Catégorie originale de l'API
+        category: product.category, // Catégorie originale de l'API
         thumbnail: product.thumbnail,
         brand: product.brand,
         rating: product.rating,
@@ -47,21 +46,19 @@ export const useProducts = () => {
         description: product.description
       })).sort((a: Product, b: Product) => a.id - b.id); // Tri API par ID croissant
       
-      setApiProducts(apiProductsData);
-      
       // 2. Charger depuis localStorage (produits locaux)
       const loadedLocalProducts = loadProductsFromStorage();
       
-      // 🔴 Produits locaux triés par ID décroissant (plus récents d'abord)
+      // Produits locaux triés par ID décroissant (plus récents d'abord)
       const sortedLocalProducts = loadedLocalProducts.sort((a, b) => b.id - a.id);
       setLocalProducts(sortedLocalProducts);
       
-      // 3. 🔴 FUSIONNER : Produits locaux d'abord, puis produits API
+      // 3. FUSIONNER : Produits locaux d'abord, puis produits API
       // Les produits locaux (ajoutés) apparaissent EN PREMIER
       // Les produits API apparaissent APRÈS, dans leur ordre original
       const allProductsSorted = [
-        ...sortedLocalProducts,  // 🔴 Produits locaux D'ABORD (plus récents d'abord)
-        ...apiProductsData       // 🔴 Produits API ENSUITE (ordre original)
+        ...sortedLocalProducts,  // Produits locaux D'ABORD (plus récents d'abord)
+        ...apiProductsData       // Produits API ENSUITE (ordre original)
       ];
       
       setAllProducts(allProductsSorted);
@@ -84,7 +81,7 @@ export const useProducts = () => {
     loadProducts();
   }, [loadProducts]);
 
-  // 🔴 AJOUTER un produit au DÉBUT
+  // AJOUTER un produit au DÉBUT
   const addProduct = useCallback((productData: Omit<Product, 'id'>) => {
     // Générer un ID unique très grand (pour distinguer des produits API)
     // Utiliser Date.now() pour garantir que l'ID est toujours plus grand
@@ -96,12 +93,12 @@ export const useProducts = () => {
       id: newId,
     };
     
-    // 🔴 Ajouter au DÉBUT des produits locaux
+    // Ajouter au DÉBUT des produits locaux
     const updatedLocalProducts = [newProduct, ...localProducts];
     setLocalProducts(updatedLocalProducts);
     saveProductsToStorage(updatedLocalProducts);
     
-    // 🔴 Ajouter au DÉBUT de tous les produits
+    // Ajouter au DÉBUT de tous les produits
     setAllProducts(prev => [newProduct, ...prev]);
     
     return newProduct;
@@ -201,7 +198,7 @@ export const useProducts = () => {
     });
   }, [allProducts]);
 
-  // 🔴 Fonction pour obtenir les catégories uniques des produits
+  // Fonction pour obtenir les catégories uniques des produits
   const getCategories = useCallback(() => {
     const allCats = allProducts.map(p => p.category);
     return ['all', ...Array.from(new Set(allCats))];
@@ -215,7 +212,7 @@ export const useProducts = () => {
     loading,
     error,
     
-    // 🔴 Catégories disponibles
+    // Catégories disponibles
     categories: getCategories(),
     
     // Fonctions

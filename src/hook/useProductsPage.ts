@@ -13,13 +13,13 @@ export interface Product {
   discountPercentage?: number;
   description?: string;
 }
+
 export const useProductsPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 12;
 
   // Charger les produits depuis l'API
@@ -51,10 +51,6 @@ export const useProductsPage = () => {
       }));
       
       setProducts(transformedProducts);
-      
-      // Calculer le nombre total de pages
-      const total = Math.ceil(transformedProducts.length / itemsPerPage);
-      setTotalPages(total);
       
     } catch (err) {
       console.error('Erreur lors du chargement des produits:', err);
@@ -94,19 +90,22 @@ export const useProductsPage = () => {
     };
   }, [products, searchQuery, currentPage]);
 
-  const { allProducts, paginatedProducts, totalItems } = getFilteredProducts();
+  const {paginatedProducts, totalItems } = getFilteredProducts();
 
   // Réinitialiser à la page 1 quand la recherche change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery]);
 
+  // Calculer le nombre total de pages
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+
   return {
     // Produits à afficher (paginés)
     products: paginatedProducts,
     
-    // Tous les produits filtrés (pour les compteurs)
-    allFilteredProducts: allProducts,
+    
+   
     
     // États
     loading,
@@ -117,7 +116,7 @@ export const useProductsPage = () => {
     setSearchQuery,
     currentPage,
     setCurrentPage,
-    totalPages: Math.ceil(totalItems / itemsPerPage),
+    totalPages,
     
     // Fonction pour recharger
     reloadProducts: loadProducts
