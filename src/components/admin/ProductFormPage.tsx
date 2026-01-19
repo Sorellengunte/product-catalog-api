@@ -9,9 +9,13 @@ import {
   ArrowRightOnRectangleIcon,
   ChartBarIcon
 } from '@heroicons/react/24/outline';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useProducts } from '../../hook/useproducts';
 import { findProductInStorage } from '../../utils/productStorage';
 import { useAuth } from '../../auth/AuthContext';
+import { productSchema } from '../../components/admin/schema'; // Seul le schéma est importé
 
 export interface Product {
   id: number;
@@ -26,50 +30,62 @@ export interface Product {
   description?: string;
 }
 
+// Déclaration locale de ProductFormData en utilisant le schéma importé
+type ProductFormData = z.infer<typeof productSchema>;
+
+// Déclaration locale des valeurs par défaut
+const defaultFormValues: ProductFormData = {
+  title: '',
+  price: '',
+  stock: '',
+  category: '',
+  thumbnail: '',
+  brand: '',
+  rating: '',
+  discountPercentage: '',
+  description: '',
+};
+
 export default function ProductFormPage() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const isEditing = !!id;
   const { user, logout } = useAuth();
-  
   const { products, addProduct, editProduct } = useProducts();
   
-  const [formData, setFormData] = useState({
-    title: '',
-    price: '',
-    stock: '',
-    category: '',
-    thumbnail: '',
-    brand: '',
-    rating: '',
-    discountPercentage: '',
-    description: ''
-  });
-  
   const [loading, setLoading] = useState(false);
+  const [formLoading, setFormLoading] = useState(isEditing);
   const [notification, setNotification] = useState<{
     type: 'success' | 'error' | 'warning';
     title: string;
     message: string;
   } | null>(null);
-  
-  const [formLoading, setFormLoading] = useState(isEditing);
 
-  // 🔴 CORRECTION : Charger le produit depuis PLUSIEURS sources
+  // Initialisation de React Hook Form avec Zod
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting }
+  } = useForm<ProductFormData>({
+    resolver: zodResolver(productSchema),
+    mode: 'onChange',
+    defaultValues: defaultFormValues // Utilisez la variable locale
+  });
+
+  // Chargement du produit
   useEffect(() => {
     if (isEditing && id) {
       const productId = parseInt(id);
-      
-      // D'abord chercher dans localStorage
       let product = findProductInStorage(productId);
       
-      // Si pas trouvé, chercher dans les produits chargés
       if (!product) {
         product = products.find(p => p.id === productId);
       }
       
       if (product) {
-        setFormData({
+        // Reset du formulaire avec les données du produit
+        const formData: ProductFormData = {
           title: product.title || '',
           price: product.price?.toString() || '0',
           stock: product.stock?.toString() || '0',
@@ -78,11 +94,12 @@ export default function ProductFormPage() {
           brand: product.brand || '',
           rating: product.rating?.toString() || '',
           discountPercentage: product.discountPercentage?.toString() || '',
-          description: product.description || ''
-        });
+          description: product.description || '',
+        };
+        
+        reset(formData);
         setFormLoading(false);
       } else {
-        // Attendre un peu plus longtemps avant d'afficher l'erreur
         const timer = setTimeout(() => {
           showNotification('warning', 'Chargement...', 
             'Le produit est en cours de chargement');
@@ -102,72 +119,30 @@ export default function ProductFormPage() {
     } else {
       setFormLoading(false);
     }
-  }, [id, isEditing, products, navigate]);
+  }, [id, isEditing, products, reset, navigate]);
 
   const showNotification = (type: 'success' | 'error' | 'warning', title: string, message: string) => {
-    const id = Date.now();
-    const newNotification = { id, type, title, message };
-    setNotification(newNotification);
-    
-    setTimeout(() => {
-      setNotification(null);
-    }, 5000);
+    setNotification({ type, title, message });
+    setTimeout(() => setNotification(null), 5000);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const validateForm = (): boolean => {
-    if (!formData.title.trim()) {
-      showNotification('error', 'Erreur', 'Le nom du produit est requis');
-      return false;
-    }
-    if (!formData.category.trim()) {
-      showNotification('error', 'Erreur', 'La catégorie est requise');
-      return false;
-    }
-    if (!formData.price.trim() || parseFloat(formData.price) <= 0) {
-      showNotification('error', 'Erreur', 'Le prix doit être supérieur à 0');
-      return false;
-    }
-    if (!formData.stock.trim() || parseInt(formData.stock) < 0) {
-      showNotification('error', 'Erreur', 'Le stock ne peut pas être négatif');
-      return false;
-    }
-    if (!formData.thumbnail.trim()) {
-      showNotification('error', 'Erreur', 'L\'URL de l\'image est requise');
-      return false;
-    }
-    return true;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
-    
+  const onSubmit = async (data: ProductFormData) => {
     setLoading(true);
     
     try {
       const productData: Omit<Product, 'id'> = {
-        title: formData.title.trim(),
-        price: parseFloat(formData.price),
-        stock: parseInt(formData.stock),
-        category: formData.category,
-        thumbnail: formData.thumbnail.trim(),
-        brand: formData.brand.trim() || undefined,
-        rating: formData.rating ? parseFloat(formData.rating) : undefined,
-        discountPercentage: formData.discountPercentage ? parseFloat(formData.discountPercentage) : undefined,
-        description: formData.description.trim() || undefined
+        title: data.title.trim(),
+        price: parseFloat(data.price),
+        stock: parseInt(data.stock),
+        category: data.category,
+        thumbnail: data.thumbnail.trim(),
+        brand: data.brand?.trim() || undefined,
+        rating: data.rating ? parseFloat(data.rating) : undefined,
+        discountPercentage: data.discountPercentage ? parseFloat(data.discountPercentage) : undefined,
+        description: data.description?.trim() || undefined
       };
       
       if (isEditing && id) {
-        // Mode édition - créer l'objet complet
         const updatedProduct: Product = {
           ...productData,
           id: parseInt(id)
@@ -176,17 +151,12 @@ export default function ProductFormPage() {
         editProduct(updatedProduct);
         showNotification('success', 'Succès !', 'Produit modifié avec succès');
         
-        setTimeout(() => {
-          navigate('/admin');
-        }, 1500);
+        setTimeout(() => navigate('/admin'), 1500);
       } else {
-        // Mode ajout
         addProduct(productData);
         showNotification('success', 'Succès !', 'Produit ajouté avec succès');
         
-        setTimeout(() => {
-          navigate('/admin');
-        }, 1500);
+        setTimeout(() => navigate('/admin'), 1500);
       }
     } catch (error) {
       showNotification('error', 'Erreur', 'Une erreur est survenue lors de l\'enregistrement');
@@ -211,6 +181,18 @@ export default function ProductFormPage() {
       case 'warning': return <ExclamationTriangleIcon className="h-5 w-5 text-amber-500" />;
       default: return null;
     }
+  };
+
+  // Composant pour afficher les erreurs
+  const ErrorMessage = ({ message }: { message?: string }) => {
+    if (!message) return null;
+    
+    return (
+      <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+        <ExclamationTriangleIcon className="h-4 w-4" />
+        {message}
+      </p>
+    );
   };
 
   return (
@@ -310,22 +292,30 @@ export default function ProductFormPage() {
               <p className="mt-4 text-gray-600">Chargement du produit...</p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Nom du produit */}
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Nom du produit *
                   </label>
-                  <input
-                    type="text"
+                  <Controller
                     name="title"
-                    value={formData.title}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
-                    placeholder="iPhone 15 Pro Max"
-                    required
+                    control={control}
+                    render={({ field }) => (
+                      <input
+                        {...field}
+                        type="text"
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 outline-none ${
+                          errors.title 
+                            ? 'border-red-300 focus:border-red-500 focus:ring-red-100' 
+                            : 'border-gray-300 focus:border-blue-500 focus:ring-blue-100'
+                        }`}
+                        placeholder="iPhone 15 Pro Max"
+                      />
+                    )}
                   />
+                  <ErrorMessage message={errors.title?.message} />
                 </div>
 
                 {/* Prix */}
@@ -333,17 +323,25 @@ export default function ProductFormPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Prix ($) *
                   </label>
-                  <input
-                    type="number"
+                  <Controller
                     name="price"
-                    value={formData.price}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
-                    placeholder="999.99"
-                    min="0"
-                    step="0.01"
-                    required
+                    control={control}
+                    render={({ field }) => (
+                      <input
+                        {...field}
+                        type="number"
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 outline-none ${
+                          errors.price 
+                            ? 'border-red-300 focus:border-red-500 focus:ring-red-100' 
+                            : 'border-gray-300 focus:border-blue-500 focus:ring-blue-100'
+                        }`}
+                        placeholder="999.99"
+                        min="0"
+                        step="0.01"
+                      />
+                    )}
                   />
+                  <ErrorMessage message={errors.price?.message} />
                 </div>
 
                 {/* Stock */}
@@ -351,16 +349,24 @@ export default function ProductFormPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Stock *
                   </label>
-                  <input
-                    type="number"
+                  <Controller
                     name="stock"
-                    value={formData.stock}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
-                    placeholder="50"
-                    min="0"
-                    required
+                    control={control}
+                    render={({ field }) => (
+                      <input
+                        {...field}
+                        type="number"
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 outline-none ${
+                          errors.stock 
+                            ? 'border-red-300 focus:border-red-500 focus:ring-red-100' 
+                            : 'border-gray-300 focus:border-blue-500 focus:ring-blue-100'
+                        }`}
+                        placeholder="50"
+                        min="0"
+                      />
+                    )}
                   />
+                  <ErrorMessage message={errors.stock?.message} />
                 </div>
 
                 {/* Catégorie */}
@@ -368,35 +374,43 @@ export default function ProductFormPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Catégorie *
                   </label>
-                  <select
+                  <Controller
                     name="category"
-                    value={formData.category}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none bg-white"
-                    required
-                  >
-                    <option value="">Sélectionner une catégorie</option>
-                    <option value="smartphones">Smartphones</option>
-                    <option value="laptops">Laptops</option>
-                    <option value="fragrances">Fragrances</option>
-                    <option value="skincare">Skincare</option>
-                    <option value="groceries">Groceries</option>
-                    <option value="home-decoration">Home Decoration</option>
-                    <option value="furniture">Furniture</option>
-                    <option value="tops">Tops</option>
-                    <option value="womens-dresses">Women's Dresses</option>
-                    <option value="womens-shoes">Women's Shoes</option>
-                    <option value="mens-shirts">Men's Shirts</option>
-                    <option value="mens-shoes">Men's Shoes</option>
-                    <option value="mens-watches">Men's Watches</option>
-                    <option value="womens-watches">Women's Watches</option>
-                    <option value="womens-bags">Women's Bags</option>
-                    <option value="womens-jewellery">Women's Jewellery</option>
-                    <option value="sunglasses">Sunglasses</option>
-                    <option value="automotive">Automotive</option>
-                    <option value="motorcycle">Motorcycle</option>
-                    <option value="lighting">Lighting</option>
-                  </select>
+                    control={control}
+                    render={({ field }) => (
+                      <select
+                        {...field}
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 outline-none bg-white ${
+                          errors.category 
+                            ? 'border-red-300 focus:border-red-500 focus:ring-red-100' 
+                            : 'border-gray-300 focus:border-blue-500 focus:ring-blue-100'
+                        }`}
+                      >
+                        <option value="">Sélectionner une catégorie</option>
+                        <option value="smartphones">Smartphones</option>
+                        <option value="laptops">Laptops</option>
+                        <option value="fragrances">Fragrances</option>
+                        <option value="skincare">Skincare</option>
+                        <option value="groceries">Groceries</option>
+                        <option value="home-decoration">Home Decoration</option>
+                        <option value="furniture">Furniture</option>
+                        <option value="tops">Tops</option>
+                        <option value="womens-dresses">Women's Dresses</option>
+                        <option value="womens-shoes">Women's Shoes</option>
+                        <option value="mens-shirts">Men's Shirts</option>
+                        <option value="mens-shoes">Men's Shoes</option>
+                        <option value="mens-watches">Men's Watches</option>
+                        <option value="womens-watches">Women's Watches</option>
+                        <option value="womens-bags">Women's Bags</option>
+                        <option value="womens-jewellery">Women's Jewellery</option>
+                        <option value="sunglasses">Sunglasses</option>
+                        <option value="automotive">Automotive</option>
+                        <option value="motorcycle">Motorcycle</option>
+                        <option value="lighting">Lighting</option>
+                      </select>
+                    )}
+                  />
+                  <ErrorMessage message={errors.category?.message} />
                 </div>
 
                 {/* Marque */}
@@ -404,14 +418,23 @@ export default function ProductFormPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Marque
                   </label>
-                  <input
-                    type="text"
+                  <Controller
                     name="brand"
-                    value={formData.brand}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
-                    placeholder="Apple"
+                    control={control}
+                    render={({ field }) => (
+                      <input
+                        {...field}
+                        type="text"
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 outline-none ${
+                          errors.brand 
+                            ? 'border-red-300 focus:border-red-500 focus:ring-red-100' 
+                            : 'border-gray-300 focus:border-blue-500 focus:ring-blue-100'
+                        }`}
+                        placeholder="Apple"
+                      />
+                    )}
                   />
+                  <ErrorMessage message={errors.brand?.message} />
                 </div>
 
                 {/* URL Image */}
@@ -419,30 +442,40 @@ export default function ProductFormPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     URL de l'image *
                   </label>
-                  <input
-                    type="url"
+                  <Controller
                     name="thumbnail"
-                    value={formData.thumbnail}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
-                    placeholder="https://example.com/image.jpg"
-                    required
-                  />
-                  {formData.thumbnail && (
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-600 mb-2">Aperçu:</p>
-                      <div className="w-32 h-32 bg-gray-100 rounded-lg overflow-hidden">
-                        <img
-                          src={formData.thumbnail}
-                          alt="Aperçu"
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150';
-                          }}
+                    control={control}
+                    render={({ field }) => (
+                      <>
+                        <input
+                          {...field}
+                          type="url"
+                          className={`w-full px-4 py-3 border rounded-xl focus:ring-2 outline-none ${
+                            errors.thumbnail 
+                              ? 'border-red-300 focus:border-red-500 focus:ring-red-100' 
+                              : 'border-gray-300 focus:border-blue-500 focus:ring-blue-100'
+                          }`}
+                          placeholder="https://example.com/image.jpg"
                         />
-                      </div>
-                    </div>
-                  )}
+                        {field.value && (
+                          <div className="mt-2">
+                            <p className="text-sm text-gray-600 mb-2">Aperçu:</p>
+                            <div className="w-32 h-32 bg-gray-100 rounded-lg overflow-hidden">
+                              <img
+                                src={field.value}
+                                alt="Aperçu"
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150';
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  />
+                  <ErrorMessage message={errors.thumbnail?.message} />
                 </div>
 
                 {/* Note */}
@@ -450,17 +483,26 @@ export default function ProductFormPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Note (0-5)
                   </label>
-                  <input
-                    type="number"
+                  <Controller
                     name="rating"
-                    value={formData.rating}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
-                    placeholder="4.5"
-                    min="0"
-                    max="5"
-                    step="0.1"
+                    control={control}
+                    render={({ field }) => (
+                      <input
+                        {...field}
+                        type="number"
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 outline-none ${
+                          errors.rating 
+                            ? 'border-red-300 focus:border-red-500 focus:ring-red-100' 
+                            : 'border-gray-300 focus:border-blue-500 focus:ring-blue-100'
+                        }`}
+                        placeholder="4.5"
+                        min="0"
+                        max="5"
+                        step="0.1"
+                      />
+                    )}
                   />
+                  <ErrorMessage message={errors.rating?.message} />
                 </div>
 
                 {/* Remise */}
@@ -468,16 +510,25 @@ export default function ProductFormPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Remise (%)
                   </label>
-                  <input
-                    type="number"
+                  <Controller
                     name="discountPercentage"
-                    value={formData.discountPercentage}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
-                    placeholder="10"
-                    min="0"
-                    max="100"
+                    control={control}
+                    render={({ field }) => (
+                      <input
+                        {...field}
+                        type="number"
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 outline-none ${
+                          errors.discountPercentage 
+                            ? 'border-red-300 focus:border-red-500 focus:ring-red-100' 
+                            : 'border-gray-300 focus:border-blue-500 focus:ring-blue-100'
+                        }`}
+                        placeholder="10"
+                        min="0"
+                        max="100"
+                      />
+                    )}
                   />
+                  <ErrorMessage message={errors.discountPercentage?.message} />
                 </div>
 
                 {/* Description */}
@@ -485,14 +536,23 @@ export default function ProductFormPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Description
                   </label>
-                  <textarea
+                  <Controller
                     name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    rows={4}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none resize-none"
-                    placeholder="Description du produit..."
+                    control={control}
+                    render={({ field }) => (
+                      <textarea
+                        {...field}
+                        rows={4}
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 outline-none resize-none ${
+                          errors.description 
+                            ? 'border-red-300 focus:border-red-500 focus:ring-red-100' 
+                            : 'border-gray-300 focus:border-blue-500 focus:ring-blue-100'
+                        }`}
+                        placeholder="Description du produit..."
+                      />
+                    )}
                   />
+                  <ErrorMessage message={errors.description?.message} />
                 </div>
               </div>
 
@@ -506,10 +566,10 @@ export default function ProductFormPage() {
                 </Link>
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || isSubmitting}
                   className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl font-medium hover:from-blue-700 hover:to-blue-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Enregistrement...' : (isEditing ? 'Mettre à jour' : 'Créer le produit')}
+                  {loading || isSubmitting ? 'Enregistrement...' : (isEditing ? 'Mettre à jour' : 'Créer le produit')}
                 </button>
               </div>
             </form>

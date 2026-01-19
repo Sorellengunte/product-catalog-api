@@ -32,13 +32,13 @@ export const useProducts = () => {
       const response = await fetch('https://dummyjson.com/products?limit=100');
       const data = await response.json();
       
-      // Transformation des produits API avec leurs catégories originales
+      // Transformation des produits API avec leurs catégories 
       const apiProductsData = data.products.map((product: any) => ({
         id: product.id,
         title: product.title,
         price: product.price,
         stock: product.stock,
-        category: product.category, // Catégorie originale de l'API
+        category: product.category, 
         thumbnail: product.thumbnail,
         brand: product.brand,
         rating: product.rating,
@@ -52,13 +52,10 @@ export const useProducts = () => {
       // Produits locaux triés par ID décroissant (plus récents d'abord)
       const sortedLocalProducts = loadedLocalProducts.sort((a, b) => b.id - a.id);
       setLocalProducts(sortedLocalProducts);
-      
-      // 3. FUSIONNER : Produits locaux d'abord, puis produits API
-      // Les produits locaux (ajoutés) apparaissent EN PREMIER
-      // Les produits API apparaissent APRÈS, dans leur ordre original
+  
       const allProductsSorted = [
-        ...sortedLocalProducts,  // Produits locaux D'ABORD (plus récents d'abord)
-        ...apiProductsData       // Produits API ENSUITE (ordre original)
+        ...sortedLocalProducts,  
+        ...apiProductsData       
       ];
       
       setAllProducts(allProductsSorted);
