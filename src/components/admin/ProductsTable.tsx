@@ -1,6 +1,6 @@
+import { Link } from 'react-router'; 
 import { EyeIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 
-// Définir Product localement dans ce fichier
 interface Product {
   id: number;
   title: string;
@@ -11,17 +11,17 @@ interface Product {
   brand?: string;
   rating?: number;
   discountPercentage?: number;
+  description?: string;
 }
 
 interface ProductsTableProps {
-  products: Product[];
+ products: Product[];
   loading: boolean;
   error: string | null;
   currentPage: number;
   totalPages: number;
   getStockColor: (stock: number) => string;
   getCategoryColor: (category: string) => string;
-  onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
 }
 
@@ -33,7 +33,7 @@ export default function ProductsTable({
   totalPages,
   getStockColor,
   getCategoryColor,
-  onEdit,
+
   onDelete,
 }: ProductsTableProps) {
   if (loading) {
@@ -91,7 +91,14 @@ export default function ProductsTable({
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                      <img src={product.thumbnail} alt={product.title} className="w-full h-full object-cover" />
+                      <img 
+                        src={product.thumbnail} 
+                        alt={product.title} 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = 'https://via.placeholder.com/150?text=Produit';
+                        }}
+                      />
                     </div>
                     <div>
                       <h4 className="font-medium text-gray-900">{product.title}</h4>
@@ -107,7 +114,7 @@ export default function ProductsTable({
                 </td>
                 <td className="px-6 py-4">
                   <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${getCategoryColor(product.category)}`}>
-                    {product.category}
+                    {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
                   </span>
                 </td>
                 <td className="px-6 py-4">
@@ -125,13 +132,14 @@ export default function ProductsTable({
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => onEdit(product)}
+                    <Link
+                      to={`/admin/products/edit/${product.id}`}
                       className="flex items-center gap-1 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+                      
                     >
                       <PencilIcon className="h-4 w-4" />
                       <span className="text-sm font-medium">Modifier</span>
-                    </button>
+                    </Link>
                     <button
                       onClick={() => onDelete(product)}
                       className="flex items-center gap-1 px-3 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors"
