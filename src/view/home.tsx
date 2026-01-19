@@ -164,7 +164,7 @@ const HomePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-blue-50/20 to-white">
+    <div className="min-h-screen flex flex-col bg-white">
       <Navbar />
       
       {/* Notification d'ajout au panier */}
@@ -374,7 +374,7 @@ const HomePage: React.FC = () => {
                   onClick={() => handleProductClick(product.id)}
                   className="bg-white rounded-2xl shadow-lg border border-gray-100 hover:shadow-2xl transition-all duration-300 overflow-hidden group transform hover:-translate-y-2 cursor-pointer relative"
                 >
-                  <div className="h-64 overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 relative">
+                  <div className="h-64 overflow-hidden bg-white relative">
                     <img 
                       src={product.image} 
                       alt={product.name}
@@ -388,7 +388,7 @@ const HomePage: React.FC = () => {
                     
                     {/* Discount badge */}
                     {product.discountPercentage > 0 && (
-                      <div className="absolute top-3 left-3 bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-lg transform group-hover:scale-110 transition-transform duration-300">
+                      <div className="absolute top-3 left-3 bg-red-500 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-lg transform group-hover:scale-110 transition-transform duration-300">
                         -{product.discountPercentage}%
                       </div>
                     )}
@@ -400,7 +400,7 @@ const HomePage: React.FC = () => {
                     </div>
                     
                     {/* Overlay au survol */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <div className="absolute inset-0 bg--black to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   </div>
                   
                   <div className="p-6">
@@ -449,7 +449,7 @@ const HomePage: React.FC = () => {
         </section>
 
         {/* Banner Promo */}
-        <section className="py-12 bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600">
+        <section className="py-12 bg-blue-600">
           <div className="container mx-auto px-4">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="text-white">
@@ -471,7 +471,7 @@ const HomePage: React.FC = () => {
         </section>
 
         {/* Features */}
-        <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
+        <section className="py-20 bg-white">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -516,7 +516,7 @@ const HomePage: React.FC = () => {
                   key={index} 
                   className="text-center p-8 rounded-2xl bg-white shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100"
                 >
-                  <div className="w-20 h-20 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-6 group hover:from-blue-100 hover:to-blue-200 transition-all duration-300">
+                  <div className="w-20 h-20 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-6 group hover:from-blue-100 hover:to-blue-200 transition-all duration-300">
                     <div className="group-hover:scale-110 transition-transform duration-300">
                       {feature.icon}
                     </div>
@@ -532,7 +532,7 @@ const HomePage: React.FC = () => {
         </section>
 
         {/* CTA Final */}
-        <section className="py-24 bg-gradient-to-r from-blue-600 to-blue-700 relative overflow-hidden">
+        <section className="py-24 bg-blue-600 relative overflow-hidden">
           <div className="absolute inset-0">
             <div className="absolute inset-0 bg-black opacity-10"></div>
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.1)_0%,transparent_50%)]"></div>
