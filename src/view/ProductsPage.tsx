@@ -3,26 +3,25 @@ import Navbar from '../components/navBar';
 import Footer from '../components/footer';
 import ProductCard from '../components/productCard';
 import { Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useProducts } from '../hook/useproducts';
+import { useProductsPage } from '../hook/useProductsPage'; // <-- Utilisez le nouveau hook
 import { useCart } from '../api/CartContext';
 import { useCategories } from '../hook/usecategories';
 
-// Type du produit tel que utilisé dans ProductsPage
+// Interface Product pour cette page
 interface Product {
   id: number;
   title: string;
-  description: string;
   price: number;
-  discountPercentage?: number;
-  rating?: number;
-  stock?: number;
-  brand?: string;
+  stock: number;
   category: string;
   thumbnail: string;
-  images?: string[];
+  brand?: string;
+  rating?: number;
+  discountPercentage?: number;
+  description?: string;
 }
 
-// Type attendu par ProductCard (obligatoire)
+// Type pour ProductCard
 interface ProductCardType {
   id: number;
   title: string;
@@ -36,7 +35,18 @@ interface ProductCardType {
 }
 
 const ProductsPage: React.FC = () => {
-  const { products, loading, error, searchQuery, setSearchQuery, currentPage, setCurrentPage, totalPages } = useProducts();
+  const { 
+    products, 
+    loading, 
+    error, 
+    searchQuery, 
+    setSearchQuery, 
+    currentPage, 
+    setCurrentPage, 
+    totalPages,
+    allFilteredProducts 
+  } = useProductsPage();
+  
   const { categories, selectedCategory, selectCategory, resetCategory } = useCategories();
   const { addToCart } = useCart();
   
@@ -44,6 +54,7 @@ const ProductsPage: React.FC = () => {
   const [showNotification, setShowNotification] = useState(false);
   const [addedProduct, setAddedProduct] = useState('');
 
+  // Synchroniser la recherche locale avec le hook
   useEffect(() => {
     const timer = setTimeout(() => setSearchQuery(localSearch), 300);
     return () => clearTimeout(timer);
@@ -56,16 +67,34 @@ const ProductsPage: React.FC = () => {
     setTimeout(() => setShowNotification(false), 2000);
   };
 
+  // Filtrer par catégorie
   const filteredProducts = selectedCategory === 'all' 
     ? products 
-    : products.filter(p => p.category?.toLowerCase() === selectedCategory.toLowerCase());
+    : products.filter(p => 
+        p.category?.toLowerCase() === selectedCategory.toLowerCase()
+      );
 
-  const searchedProducts = localSearch.trim() === ''
+  // Filtrer par recherche (déjà fait dans le hook, mais on refiltre pour la catégorie)
+  const finalProducts = localSearch.trim() === ''
     ? filteredProducts
     : filteredProducts.filter(p => 
-        p.title?.toLowerCase().includes(localSearch.toLowerCase()) ||
-        (p.description && p.description.toLowerCase().includes(localSearch.toLowerCase()))
+        p.title?.toLowerCase().includes(localSearch.toLowerCase())
       );
+
+  // Mapper pour ProductCard
+  const mapToProductCardType = (product: Product): ProductCardType => {
+    return {
+      id: product.id,
+      title: product.title || 'Sans titre',
+      price: product.price || 0,
+      discountPercentage: product.discountPercentage || 0,
+      rating: product.rating || 0,
+      brand: product.brand || 'Marque non spécifiée',
+      category: product.category || 'Non catégorisé',
+      thumbnail: product.thumbnail || 'https://via.placeholder.com/300',
+      stock: product.stock || 0,
+    };
+  };
 
   if (loading) {
     return (
@@ -74,7 +103,7 @@ const ProductsPage: React.FC = () => {
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <p className="text-gray-600 mt-4">Chargement...</p>
+            <p className="text-gray-600 mt-4">Chargement des produits...</p>
           </div>
         </main>
         <Footer />
@@ -184,7 +213,7 @@ const ProductsPage: React.FC = () => {
                 </span>
               )}
               <span className="text-sm text-gray-600 ml-2">
-                {searchedProducts.length} résultat{searchedProducts.length > 1 ? 's' : ''}
+                {finalProducts.length} résultat{finalProducts.length > 1 ? 's' : ''}
               </span>
             </div>
           )}
@@ -198,7 +227,7 @@ const ProductsPage: React.FC = () => {
         )}
 
         {/* Produits */}
-        {searchedProducts.length === 0 ? (
+        {finalProducts.length === 0 ? (
           <div className="text-center py-12">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Search className="w-8 h-8 text-gray-400" />
@@ -215,22 +244,15 @@ const ProductsPage: React.FC = () => {
         ) : (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
-              {searchedProducts.map(product => {
-                // On mappe le produit pour correspondre au type attendu par ProductCard
-                const mappedProduct: ProductCardType = {
-                  id: product.id,
-                  title: product.title,
-                  price: product.price,
-                  discountPercentage: product.discountPercentage || 0,
-                  rating: product.rating || 0,
-                  brand: product.brand || '',
-                  category: product.category,
-                  thumbnail: product.thumbnail,
-                  stock: product.stock || 0,
-                };
+              {finalProducts.map(product => {
+                const productForCard = mapToProductCardType(product);
+                
                 return (
                   <div key={product.id} className="transform transition-transform hover:-translate-y-1">
-                    <ProductCard product={mappedProduct} addToCart={handleAddToCart} />
+                    <ProductCard 
+                      product={productForCard} 
+                      addToCart={() => handleAddToCart(product, 1)} 
+                    />
                   </div>
                 );
               })}
