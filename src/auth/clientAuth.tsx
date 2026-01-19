@@ -77,11 +77,7 @@ export default function ClientAuth() {
           </div>
         </form>
 
-        <p className="mt-6 text-gray-500 text-xs">
-          🔑 Client : <b>emilys / emilyspass</b>
-          <br />
-          🔑 Admin : <b>admin / admin123</b>
-        </p>
+       
       </div>
     </div>
   );
