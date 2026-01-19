@@ -2,13 +2,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router';
 import {
   UserCircleIcon,
-  ChartBarIcon,
   ArrowRightOnRectangleIcon,
   MagnifyingGlassIcon,
   PlusIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  CheckCircleIcon,
   ExclamationTriangleIcon,
   TrashIcon,
   HomeIcon,

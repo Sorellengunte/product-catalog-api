@@ -44,7 +44,7 @@ const ProductsPage: React.FC = () => {
     currentPage, 
     setCurrentPage, 
     totalPages,
-    allFilteredProducts 
+    
   } = useProductsPage();
   
   const { categories, selectedCategory, selectCategory, resetCategory } = useCategories();
