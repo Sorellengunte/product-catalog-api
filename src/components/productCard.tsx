@@ -36,7 +36,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, addToCart }) => {
   return (
     <div className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden group w-full max-w-[280px] mx-auto">
       {/* Image avec badge */}
-      <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="relative aspect-square overflow-hidden bg-gray-100">
         <Link to={`/product/${product.id}`}>
           <img
             src={product.thumbnail}
@@ -47,7 +47,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, addToCart }) => {
         
         {/* Badge réduction */}
         {product.discountPercentage > 0 && (
-          <div className="absolute top-3 left-3 px-3 py-1.5 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold rounded-full shadow-lg">
+          <div className="absolute top-3 left-3 px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-full shadow-lg">
             -{product.discountPercentage.toFixed(0)}%
           </div>
         )}
@@ -113,7 +113,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, addToCart }) => {
           {addToCart && product.stock > 0 && (
             <button
               onClick={handleAddToCart}
-              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl hover:from-blue-700 hover:to-blue-600 transition-all duration-300 shadow-sm hover:shadow-md group/cart"
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-xl hover:from-blue-700 hover:to-blue-600 transition-all duration-300 shadow-sm hover:shadow-md group/cart"
               title="Ajouter au panier"
             >
               <ShoppingBag className="w-4 h-4 group-hover/cart:scale-110 transition-transform" />
