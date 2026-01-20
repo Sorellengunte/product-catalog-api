@@ -11,9 +11,9 @@ export interface CartItem {
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (product: Omit<CartItem, "quantity">, quantity?: number) => void;
+  addToCart: (product: Omit<CartItem, "quantity">, quantity?: number) => void;// on recupere le produit sans la quantite
   removeFromCart: (id: number) => void;
-  updateQuantity: (id: number, quantity: number) => void;
+  updateQuantity: (id: number, quantity: number) => void;// par defaut la quantite est 1
   clearCart: () => void;
   getTotalPrice: () => number;
   cartCount: number;
@@ -67,10 +67,10 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const getTotalPrice = () => {
-    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);// parcours le tableau et calcul le total
   };
 
-  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0); // calcule le nbre d'articles par ligne
 
   return (
     <CartContext.Provider

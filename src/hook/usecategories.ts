@@ -6,29 +6,48 @@ export const useCategories = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
 
+  // Charger les catégories depuis DummyJSON
   const fetchCategories = async () => {
     try {
       setLoading(true);
+      
+      // Récupérer les catégories depuis l'API
       const response = await fetch('https://dummyjson.com/products/categories');
       
-      if (!response.ok) throw new Error('Erreur API');
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
       
       const data = await response.json();
       
-      const categoryList = data.map((cat: any) => {
-        if (typeof cat === 'string') return cat;
-        if (cat && typeof cat === 'object') {
-          return cat.slug || cat.name || String(cat);
-        }
-        return String(cat);
-      }).filter((cat: string) => cat && cat.trim() !== '');
+      // DummyJSON retourne un tableau de strings directement
+      // Exemple: ["smartphones", "laptops", "fragrances", ...]
+      const categoryList = data;
       
-      setCategories(['all', ...categoryList]);
+      // S'assurer que ce sont bien des strings
+      const validCategories = categoryList
+        .map((cat: any) => {
+          if (typeof cat === 'string') return cat;
+          if (cat && typeof cat === 'object') {
+            return cat.slug || cat.name || String(cat);
+          }
+          return String(cat);
+        })
+        .filter((cat: string) => cat && cat.trim() !== '')
+        .sort(); // Trier alphabétiquement
+      
+      // Ajouter "all" au début
+      setCategories(['all', ...validCategories]);
       setError(null);
       
+      console.log('✅ Catégories chargées:', validCategories.length, 'catégories');
+      
     } catch (err) {
+      console.error('❌ Erreur chargement catégories:', err);
       setError('Impossible de charger les catégories');
-      console.error(err);
+      
+      // En cas d'erreur, garder seulement "all"
+      setCategories(['all']);
     } finally {
       setLoading(false);
     }
@@ -38,42 +57,55 @@ export const useCategories = () => {
     fetchCategories();
   }, []);
 
-  const refreshCategories = () => {
-    fetchCategories();
-  };
-
+  // Filtre SIMPLE - vérifie l'égalité exacte
   const filterProductsByCategory = (products: any[], category: string) => {
-    if (category === 'all' || !category) return products;
+    if (category === 'all' || !category || !products) return products;
+    
     return products.filter(product => {
-      const productCategory = product.category?.toLowerCase?.() || '';
-      return productCategory === category.toLowerCase();
+      if (!product || !product.category) return false;
+      
+      const productCategory = product.category.toLowerCase().trim();
+      const selectedCategoryLower = category.toLowerCase().trim();
+      
+      return productCategory === selectedCategoryLower;
     });
   };
 
-  // Fonction pour formater le nom des catégories
+  // Formater le nom pour l'affichage (optionnel)
   const formatCategoryName = (category: string): string => {
     if (!category || category.trim() === '') return '';
     if (category === 'all') return 'Toutes catégories';
     
-    const categoryStr = typeof category === 'string' ? category : String(category);
-    
-    return categoryStr
-      .replace(/[-_]/g, ' ')
+    // Convertir "smartphones" en "Smartphones", "womens-dresses" en "Women's Dresses"
+    return category
+      .replace(/-/g, ' ')
       .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .map(word => {
+        // Gérer les pluriels spéciaux
+        if (word === 'womens') return "Women's";
+        if (word === 'mens') return "Men's";
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      })
       .join(' ');
   };
 
   return {
+    // États
     categories,
     selectedCategory,
     loading,
     error,
+    
+    // Actions
     setSelectedCategory,
-    filterProductsByCategory,
-    refreshCategories,
     selectCategory: (category: string) => setSelectedCategory(category),
     resetCategory: () => setSelectedCategory('all'),
+    
+    // Fonctions utilitaires
+    filterProductsByCategory,
     formatCategoryName,
+    
+    // Rafraîchir
+    refreshCategories: fetchCategories
   };
 };

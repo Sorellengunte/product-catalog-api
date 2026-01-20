@@ -98,9 +98,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, addToCart }) => {
           )}
         </div>
 
-        {/* Boutons - positionnés aux extrémités */}
+        
         <div className="flex items-center justify-between">
-          {/* Bouton Détails à gauche */}
+          
           <Link 
             to={`/product/${product.id}`}
             className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 hover:text-gray-900 transition-all duration-300 group/detail"
@@ -109,7 +109,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, addToCart }) => {
             <span className="text-sm font-medium">Détails</span>
           </Link>
 
-          {/* Bouton Ajouter au panier à droite */}
+          {/* Bouton Ajouter au panier */}
           {addToCart && product.stock > 0 && (
             <button
               onClick={handleAddToCart}
@@ -117,7 +117,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, addToCart }) => {
               title="Ajouter au panier"
             >
               <ShoppingBag className="w-4 h-4 group-hover/cart:scale-110 transition-transform" />
-              <span className="text-sm font-medium"> panier</span> {/* Texte changé */}
+              <span className="text-sm font-medium"> panier</span> 
             </button>
           )}
           

@@ -426,6 +426,7 @@ const HomePage: React.FC = () => {
                           </span>
                         )}
                       </div>
+                    {/* context */}
                       <button 
                         onClick={(e) => handleAddToCart(e, product)}
                         className="flex items-center justify-center w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-all duration-300 transform hover:scale-110 hover:rotate-90 shadow-md"

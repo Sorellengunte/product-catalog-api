@@ -6,8 +6,8 @@ import { Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useProductsPage } from '../hook/useProductsPage';
 import { useCart } from '../api/CartContext';
 import { useCategories } from '../hook/usecategories';
+import { useDummyJsonPagination } from '../api/PaginationContext';
 
-// Interface Product pour cette page
 interface Product {
   id: number;
   title: string;
@@ -21,7 +21,7 @@ interface Product {
   description?: string;
 }
 
-// Type pour ProductCard
+
 interface ProductCardType {
   id: number;
   title: string;
@@ -47,6 +47,15 @@ const ProductsPage: React.FC = () => {
     
   } = useProductsPage();
   
+  const { 
+    currentPage: contextCurrentPage,
+    totalPages: contextTotalPages,
+    goToPage,
+    goToNextPage,
+    goToPreviousPage,
+    updateFromApiResponse
+  } = useDummyJsonPagination();
+  
   const { categories, selectedCategory, selectCategory, resetCategory } = useCategories();
   const { addToCart } = useCart();
   
@@ -59,6 +68,20 @@ const ProductsPage: React.FC = () => {
     const timer = setTimeout(() => setSearchQuery(localSearch), 300);
     return () => clearTimeout(timer);
   }, [localSearch, setSearchQuery]);
+
+  // Mettre à jour la pagination quand les données changent
+  useEffect(() => {
+    if (products.length > 0) {
+      
+      const dummyJsonResponse = {
+        products,
+        total: 100, 
+        skip: (contextCurrentPage - 1) * 10,
+        limit: 10
+      };
+      updateFromApiResponse(dummyJsonResponse);
+    }
+  }, [products, contextCurrentPage, updateFromApiResponse]);
 
   const handleAddToCart = (product: Product, quantity: number) => {
     addToCart(product, quantity);
@@ -242,7 +265,7 @@ const ProductsPage: React.FC = () => {
           </div>
         ) : (
           <>
-            {/* Grille de produits - 1 par ligne sur mobile */}
+            {/* Grille de produit sur mobile */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 lg:gap-6 mb-6 md:mb-8">
               {finalProducts.map(product => {
                 const productForCard = mapToProductCardType(product);
@@ -251,7 +274,7 @@ const ProductsPage: React.FC = () => {
                   <div key={product.id} className="w-full">
                     <ProductCard 
                       product={productForCard} 
-                      addToCart={() => handleAddToCart(product, 1)} 
+                      addToCart={() => handleAddToCart(product, 1)} // context
                     />
                   </div>
                 );
@@ -259,32 +282,32 @@ const ProductsPage: React.FC = () => {
             </div>
 
             {/* Pagination */}
-            {totalPages > 1 && (
+            {contextTotalPages > 1 && (
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-4 py-4 md:py-6">
                 <div className="text-xs md:text-sm text-gray-600">
-                  Page {currentPage} sur {totalPages}
+                  Page {contextCurrentPage} sur {contextTotalPages}
                 </div>
                 <div className="flex items-center gap-1 md:gap-2">
                   <button
-                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
+                    onClick={goToPreviousPage}
+                    disabled={contextCurrentPage === 1}
                     className="p-1.5 md:p-2 rounded-lg border border-gray-200 hover:border-gray-900 hover:text-gray-900 disabled:opacity-50 transition-colors"
                   >
                     <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
                   </button>
                   
                   <div className="flex items-center gap-1">
-                    {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                    {[...Array(Math.min(5, contextTotalPages))].map((_, i) => {
                       let pageNum = i + 1;
-                      if (totalPages > 5 && currentPage > 3) pageNum = currentPage - 2 + i;
-                      if (pageNum > totalPages) return null;
+                      if (contextTotalPages > 5 && contextCurrentPage > 3) pageNum = contextCurrentPage - 2 + i;
+                      if (pageNum > contextTotalPages) return null;
                       return (
                         <button
                           key={pageNum}
-                          onClick={() => setCurrentPage(pageNum)}
+                          onClick={() => goToPage(pageNum)}
                           className={`w-8 h-8 md:w-10 md:h-10 rounded-lg font-medium transition-colors text-sm md:text-base ${
-                            currentPage === pageNum
-                              ? 'bg-gray-900 text-white'
+                            contextCurrentPage === pageNum
+                              ? 'bg-blue-600 text-white'
                               : 'bg-white border border-gray-200 hover:border-gray-900'
                           }`}
                         >
@@ -295,8 +318,8 @@ const ProductsPage: React.FC = () => {
                   </div>
                   
                   <button
-                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                    disabled={currentPage === totalPages}
+                    onClick={goToNextPage}
+                    disabled={contextCurrentPage === contextTotalPages}
                     className="p-1.5 md:p-2 rounded-lg border border-gray-200 hover:border-gray-900 hover:text-gray-900 disabled:opacity-50 transition-colors"
                   >
                     <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
