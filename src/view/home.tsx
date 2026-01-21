@@ -94,7 +94,7 @@ const HomePage: React.FC = () => {
       image: "https://images.unsplash.com/photo-1556656793-08538906a9f8?q=80&w=2070&auto=format&fit=crop",
       color: "bg-gradient-to-r from-cyan-600/80 via-blue-700/70 to-blue-900/60",
       buttonText: "Découvrir les marques",
-      badge: "🏆 Élu Meilleur Shop 2024"
+      badge: "🏆 Élu Meilleur Shop 2026"
     }
   ];
 
@@ -426,6 +426,7 @@ const HomePage: React.FC = () => {
                           </span>
                         )}
                       </div>
+                    {/* context */}
                       <button 
                         onClick={(e) => handleAddToCart(e, product)}
                         className="flex items-center justify-center w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-all duration-300 transform hover:scale-110 hover:rotate-90 shadow-md"
