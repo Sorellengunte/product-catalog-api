@@ -46,7 +46,7 @@ const ProductsPage: React.FC = () => {
   
   const { 
     currentPage,
-    totalPages,
+    
     // Les fonctions de pagination sont déjà incluses dans le composant Pagination
   } = useDummyJsonPagination();
   

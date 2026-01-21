@@ -1,5 +1,5 @@
 // src/hook/useProducts.tsx
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   loadProductsFromStorage, 
   saveProductsToStorage
