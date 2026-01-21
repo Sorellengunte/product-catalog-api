@@ -1,5 +1,5 @@
-// src/hook/useProductsPage.ts
-import { useState, useEffect, useCallback } from 'react';
+// src/hooks/useProductsPage.ts
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useDummyJsonPagination } from '../api/PaginationContext';
 import { 
   loadProductsFromStorage, 
@@ -20,44 +20,48 @@ export interface Product {
 }
 
 export const useProductsPage = () => {
-  // États du CRUD
+  // États pour les produits locaux
   const [localProducts, setLocalProducts] = useState<Product[]>([]);
+  // États pour les produits API (paginés)
   const [apiProducts, setApiProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // États pour les filtres
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [categories, setCategories] = useState<string[]>(['all']);
   
   // Contexte de pagination
-  const {
-    currentPage,
-    itemsPerPage,
-    totalPages,
-    totalItems,
-    goToPage,
-    goToNextPage,
-    goToPreviousPage,
-    updateFromApiResponse,
-    getQueryString
-  } = useDummyJsonPagination();
+  const pagination = useDummyJsonPagination();
 
-  // ==================== PARTIE API DummyJSON ====================
-  
-  // Charger les produits depuis l'API avec pagination
+  // ==================== CHARGEMENT DES PRODUITS LOCAUX ====================
+  const loadLocalProducts = useCallback(() => {
+    try {
+      const loadedProducts = loadProductsFromStorage();
+      const sortedProducts = loadedProducts.sort((a, b) => b.id - a.id);
+      setLocalProducts(sortedProducts);
+    } catch (err) {
+      console.error('Erreur chargement local:', err);
+      setLocalProducts([]);
+    }
+  }, []);
+
+  // ==================== CHARGEMENT DES PRODUITS API (PAGINÉS) ====================
   const loadApiProducts = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       
-      // Construire l'URL selon la catégorie
+      // Construire l'URL en fonction de la catégorie
       let url: string;
-      const queryString = getQueryString(); // ?limit=12&skip=0
       
-      if (selectedCategory && selectedCategory !== 'all') {
-        // Utiliser l'endpoint de catégorie DummyJSON
-        url = `https://dummyjson.com/products/category/${selectedCategory}${queryString}`;
+      if (selectedCategory !== 'all') {
+        // Utiliser l'endpoint de catégorie pour la pagination
+        url = `https://dummyjson.com/products/category/${selectedCategory}${pagination.getQueryString()}`;
       } else {
         // Pagination normale
-        url = `https://dummyjson.com/products${queryString}`;
+        url = `https://dummyjson.com/products${pagination.getQueryString()}`;
       }
       
       console.log('📡 Chargement API:', url);
@@ -70,12 +74,15 @@ export const useProductsPage = () => {
       
       const data = await response.json();
       
-      // Pour les catégories, la structure peut varier
-      const productsData = selectedCategory !== 'all' 
-        ? data.products || data  // Certains endpoints retournent directement
-        : data.products;
+      console.log('✅ Données API reçues:', {
+        total: data.total,
+        count: data.products?.length,
+        skip: data.skip,
+        limit: data.limit
+      });
       
-      const transformedProducts: Product[] = (productsData || []).map((item: any) => ({
+      // Transformer les données
+      const transformedProducts: Product[] = (data.products || []).map((item: any) => ({
         id: item.id,
         title: item.title,
         price: item.price,
@@ -90,45 +97,69 @@ export const useProductsPage = () => {
       
       setApiProducts(transformedProducts);
       
-      // Mettre à jour la pagination avec la réponse API
-      updateFromApiResponse({
+      // Mettre à jour la pagination avec la réponse de l'API
+      pagination.updateFromApiResponse({
         products: transformedProducts,
         total: data.total || 0,
         skip: data.skip || 0,
-        limit: data.limit || itemsPerPage
+        limit: data.limit || pagination.itemsPerPage
       });
       
-      setError(null);
-      
-    } catch (err) {
-      console.error('❌ Erreur API:', err);
-      setError('Impossible de charger les produits depuis l\'API');
+    } catch (err: any) {
+      console.error('❌ Erreur API paginée:', err);
+      setError(`Impossible de charger les produits: ${err.message}`);
       setApiProducts([]);
     } finally {
       setLoading(false);
     }
-  }, [currentPage, itemsPerPage, selectedCategory, getQueryString, updateFromApiResponse]);
+  }, [pagination, selectedCategory]);
 
-  // ==================== PARTIE CRUD Local ====================
-  
-  // Charger les produits locaux depuis localStorage
-  const loadLocalProducts = useCallback(() => {
+  // ==================== CHARGEMENT DES CATÉGORIES ====================
+  const loadCategories = useCallback(async () => {
     try {
-      const loadedProducts = loadProductsFromStorage();
-      // Produits locaux triés par ID décroissant (plus récents d'abord)
-      const sortedProducts = loadedProducts.sort((a, b) => b.id - a.id);
-      setLocalProducts(sortedProducts);
+      const response = await fetch('https://dummyjson.com/products/categories');
+      const apiCategories = await response.json();
+      
+      const loadedLocalProducts = loadProductsFromStorage();
+      const localCategories = [...new Set(loadedLocalProducts.map(p => p.category))];
+      
+      const allCategories = ['all', ...new Set([...apiCategories, ...localCategories])];
+      setCategories(allCategories);
     } catch (err) {
-      console.error('❌ Erreur chargement local:', err);
-      setLocalProducts([]);
+      console.error('Erreur chargement catégories:', err);
+      const loadedLocalProducts = loadProductsFromStorage();
+      const localCategories = ['all', ...new Set(loadedLocalProducts.map(p => p.category))];
+      setCategories(localCategories);
     }
   }, []);
 
-  // AJOUTER un produit local
+  // ==================== CHARGEMENT INITIAL ====================
+  useEffect(() => {
+    loadLocalProducts();
+    loadCategories();
+    loadApiProducts();
+  }, []); // Exécuter une seule fois au montage
+
+  // ==================== RE-CHARGEMENT QUAND LA PAGE CHANGE ====================
+  useEffect(() => {
+    console.log('Page changée:', pagination.currentPage);
+    loadApiProducts();
+  }, [pagination.currentPage]);
+
+  // ==================== RE-CHARGEMENT QUAND LA CATÉGORIE CHANGE ====================
+  useEffect(() => {
+    console.log('Catégorie changée:', selectedCategory);
+    // Retour à la première page quand la catégorie change
+    pagination.goToFirstPage();
+    loadApiProducts();
+  }, [selectedCategory]);
+
+  // ==================== CRUD LOCAL ====================
   const addProduct = useCallback((productData: Omit<Product, 'id'>) => {
     try {
       // ID pour produits locaux (commence à 1001 pour éviter les conflits)
-      const maxLocalId = Math.max(0, ...localProducts.map(p => p.id), 1000);
+      const loadedProducts = loadProductsFromStorage();
+      const maxLocalId = Math.max(0, ...loadedProducts.map(p => p.id), 1000);
       const newId = maxLocalId + 1;
       
       const newProduct: Product = {
@@ -137,52 +168,46 @@ export const useProductsPage = () => {
       };
       
       // Ajouter au DÉBUT des produits locaux
-      const updatedLocalProducts = [newProduct, ...localProducts];
+      const updatedLocalProducts = [newProduct, ...loadedProducts];
       setLocalProducts(updatedLocalProducts);
       saveProductsToStorage(updatedLocalProducts);
       
-      console.log('✅ Produit ajouté:', newProduct);
+      // Mettre à jour les catégories
+      loadCategories();
+      
+      console.log('✅ Produit local ajouté:', newProduct);
       return newProduct;
       
     } catch (err) {
       console.error('❌ Erreur ajout produit:', err);
       throw err;
     }
-  }, [localProducts]);
+  }, [loadCategories]);
 
-  // ÉDITER un produit
   const editProduct = useCallback((updatedProduct: Product) => {
     try {
-      const isLocalProduct = updatedProduct.id > 1000;
+      const loadedProducts = loadProductsFromStorage();
+      let updatedLocalProducts = [...loadedProducts];
       
-      let updatedLocalProducts = [...localProducts];
+      const productIndex = loadedProducts.findIndex(p => p.id === updatedProduct.id);
       
-      if (isLocalProduct) {
-        // C'est un produit local existant
-        const productIndex = localProducts.findIndex(p => p.id === updatedProduct.id);
-        
-        if (productIndex !== -1) {
-          updatedLocalProducts[productIndex] = updatedProduct;
-        } else {
-          updatedLocalProducts = [updatedProduct, ...updatedLocalProducts];
-        }
-        
-        // Re-trier
-        updatedLocalProducts.sort((a, b) => b.id - a.id);
-        setLocalProducts(updatedLocalProducts);
-        saveProductsToStorage(updatedLocalProducts);
+      if (productIndex !== -1) {
+        // Mettre à jour le produit existant
+        updatedLocalProducts[productIndex] = updatedProduct;
       } else {
-        // C'est un produit API - on le convertit en local avec nouvel ID
-        const maxLocalId = Math.max(0, ...localProducts.map(p => p.id), 1000);
-        const convertedProduct = {
-          ...updatedProduct,
-          id: maxLocalId + 1
-        };
-        
-        const updatedLocalProducts = [convertedProduct, ...localProducts];
-        setLocalProducts(updatedLocalProducts);
-        saveProductsToStorage(updatedLocalProducts);
+        // Ajouter comme nouveau produit local
+        const maxLocalId = Math.max(0, ...loadedProducts.map(p => p.id), 1000);
+        updatedProduct.id = maxLocalId + 1;
+        updatedLocalProducts = [updatedProduct, ...updatedLocalProducts];
       }
+      
+      // Re-trier
+      updatedLocalProducts.sort((a, b) => b.id - a.id);
+      setLocalProducts(updatedLocalProducts);
+      saveProductsToStorage(updatedLocalProducts);
+      
+      // Mettre à jour les catégories
+      loadCategories();
       
       console.log('✅ Produit modifié:', updatedProduct);
       return updatedProduct;
@@ -191,14 +216,17 @@ export const useProductsPage = () => {
       console.error('❌ Erreur modification produit:', err);
       throw err;
     }
-  }, [localProducts]);
+  }, [loadCategories]);
 
-  // SUPPRIMER un produit
   const deleteProduct = useCallback((id: number) => {
     try {
-      const updatedLocalProducts = localProducts.filter(p => p.id !== id);
+      const loadedProducts = loadProductsFromStorage();
+      const updatedLocalProducts = loadedProducts.filter(p => p.id !== id);
       setLocalProducts(updatedLocalProducts);
       saveProductsToStorage(updatedLocalProducts);
+      
+      // Mettre à jour les catégories
+      loadCategories();
       
       console.log('🗑️ Produit supprimé:', id);
       
@@ -206,116 +234,83 @@ export const useProductsPage = () => {
       console.error('❌ Erreur suppression produit:', err);
       throw err;
     }
-  }, [localProducts]);
+  }, [loadCategories]);
 
-  // ==================== COMBINAISON & FILTRAGE ====================
+  // ==================== COMBINAISON ET FILTRAGE ====================
   
-  // Charger initialement
-  useEffect(() => {
-    loadLocalProducts();
-  }, [loadLocalProducts]);
-
-  // Recharger les produits API quand la page ou la catégorie change
-  useEffect(() => {
-    loadApiProducts();
-  }, [currentPage, selectedCategory, loadApiProducts]);
-
-  // Combiner produits locaux et API
-  const allProducts = [...localProducts, ...apiProducts];
-
-  // Filtrer par recherche (côté client)
-  const getFilteredProducts = useCallback(() => {
-    let filtered = allProducts;
+  // Filtrer les produits locaux par catégorie et recherche
+  const filteredLocalProducts = useMemo(() => {
+    let filtered = localProducts;
     
-    // Filtre par catégorie
-    if (selectedCategory && selectedCategory !== 'all') {
-      filtered = filtered.filter(product =>
-        product.category?.toLowerCase() === selectedCategory.toLowerCase()
+    // Filtrer par catégorie
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(p => 
+        p.category.toLowerCase() === selectedCategory.toLowerCase()
       );
     }
     
-    // Filtre par recherche textuelle
+    // Filtrer par recherche texte
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(product =>
-        product.title.toLowerCase().includes(query) ||
-        product.description?.toLowerCase().includes(query) ||
-        product.category.toLowerCase().includes(query) ||
-        product.brand?.toLowerCase().includes(query)
+      filtered = filtered.filter(p => 
+        p.title.toLowerCase().includes(query) ||
+        p.description?.toLowerCase().includes(query) ||
+        p.brand?.toLowerCase().includes(query) ||
+        p.category.toLowerCase().includes(query)
       );
     }
     
     return filtered;
-  }, [allProducts, selectedCategory, searchQuery]);
+  }, [localProducts, selectedCategory, searchQuery]);
 
-  const filteredProducts = getFilteredProducts();
+  // Produits à afficher: locaux filtrés + API de la page courante
+  const products = useMemo(() => {
+    return [...filteredLocalProducts, ...apiProducts];
+  }, [filteredLocalProducts, apiProducts]);
 
-  // Réinitialiser à la page 1 quand on recherche ou change de catégorie
-  useEffect(() => {
-    if (searchQuery.trim() || selectedCategory !== 'all') {
-      goToPage(1);
-    }
-  }, [searchQuery, selectedCategory, goToPage]);
-
-  // Obtenir les catégories uniques
-  const getCategories = useCallback(() => {
-    // Combiner catégories API + locales
-    const allCategories = [...new Set([
-      ...apiProducts.map(p => p.category),
-      ...localProducts.map(p => p.category)
-    ])];
-    
-    return ['all', ...allCategories.sort()];
-  }, [apiProducts, localProducts]);
-
-  // Recherche avancée (dans tous les produits)
-  const searchAllProducts = useCallback(async (query: string) => {
-    if (!query.trim()) return [];
-    
-    try {
-      const response = await fetch(`https://dummyjson.com/products/search?q=${encodeURIComponent(query)}`);
-      const data = await response.json();
-      
-      return (data.products || []).map((item: any) => ({
-        id: item.id,
-        title: item.title,
-        price: item.price,
-        stock: item.stock,
-        category: item.category,
-        thumbnail: item.thumbnail,
-        brand: item.brand || '',
-        rating: item.rating || 0,
-        discountPercentage: item.discountPercentage || 0,
-        description: item.description || ''
-      }));
-    } catch (err) {
-      console.error('❌ Erreur recherche:', err);
-      return [];
-    }
-  }, []);
-
-  // Gestion de la recherche avec délai
+  // Gestionnaires de filtres
   const handleSearchChange = useCallback((value: string) => {
     setSearchQuery(value);
+  }, []);
+
+  const handleCategoryChange = useCallback((category: string) => {
+    setSelectedCategory(category);
   }, []);
 
   // Réinitialiser les filtres
   const resetFilters = useCallback(() => {
     setSearchQuery('');
     setSelectedCategory('all');
-    goToPage(1);
-  }, [goToPage]);
+    pagination.goToFirstPage();
+  }, [pagination]);
+
+  // Recharger tous les produits
+  const reloadProducts = useCallback(() => {
+    loadLocalProducts();
+    loadApiProducts();
+    loadCategories();
+  }, [loadLocalProducts, loadApiProducts, loadCategories]);
+
+  // Statistiques
+  const stats = useMemo(() => {
+    const showingStart = ((pagination.currentPage - 1) * pagination.itemsPerPage) + 1;
+    const showingEnd = Math.min(pagination.currentPage * pagination.itemsPerPage, products.length);
+    
+    return {
+      totalLocal: localProducts.length,
+      totalApi: pagination.totalItems || 0,
+      totalFiltered: products.length,
+      totalPages: pagination.totalPages || 1,
+      showingStart: showingStart > products.length ? 0 : showingStart,
+      showingEnd,
+    };
+  }, [localProducts.length, pagination, products.length]);
 
   return {
     // ==================== DONNÉES ====================
-    
-    // Produits combinés et filtrés
-    products: filteredProducts,
-    
-    // Données séparées (pour debug/info)
+    products,
     localProducts,
     apiProducts,
-    allProducts,
     
     // ==================== ÉTATS ====================
     loading,
@@ -325,52 +320,30 @@ export const useProductsPage = () => {
     searchQuery,
     setSearchQuery: handleSearchChange,
     selectedCategory,
-    setSelectedCategory,
+    setSelectedCategory: handleCategoryChange,
     
     // ==================== PAGINATION ====================
-    currentPage,
-    setCurrentPage: goToPage,
-    totalPages,
-    totalProducts: totalItems + localProducts.length, // Total API + locaux
-    itemsPerPage,
-    
-    // Navigation
-    goToNextPage,
-    goToPreviousPage,
+    currentPage: pagination.currentPage,
+    setCurrentPage: pagination.goToPage,
+    totalPages: pagination.totalPages,
+    totalProducts: localProducts.length + (pagination.totalItems || 0),
+    itemsPerPage: pagination.itemsPerPage,
+    goToNextPage: pagination.goToNextPage,
+    goToPreviousPage: pagination.goToPreviousPage,
+    goToFirstPage: pagination.goToFirstPage,
+    goToLastPage: pagination.goToLastPage,
     
     // ==================== CATÉGORIES ====================
-    categories: getCategories(),
+    categories,
     
     // ==================== CRUD ====================
-    // Ajout
     addProduct,
-    
-    // Modification
     editProduct,
-    
-    // Suppression
     deleteProduct,
     
     // ==================== FONCTIONS UTILITAIRES ====================
-    // Recherche
-    searchAllProducts,
-    
-    // Rechargement
-    reloadProducts: () => {
-      loadLocalProducts();
-      loadApiProducts();
-    },
-    
-    // Réinitialisation
+    reloadProducts,
     resetFilters,
-    
-    // Informations
-    getStats: () => ({
-      totalLocal: localProducts.length,
-      totalApi: apiProducts.length,
-      totalFiltered: filteredProducts.length,
-      currentCategory: selectedCategory,
-      hasSearch: searchQuery.trim().length > 0
-    })
+    getStats: () => stats,
   };
 };

@@ -1,3 +1,4 @@
+// src/components/AdminDashboard.tsx
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router';
 import {
@@ -5,8 +6,6 @@ import {
   ArrowRightOnRectangleIcon,
   MagnifyingGlassIcon,
   PlusIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
   ExclamationTriangleIcon,
   TrashIcon,
   HomeIcon,
@@ -16,6 +15,7 @@ import {
 import { useAuth } from '../../auth/AuthContext';
 import { useProducts } from '../../hook/useproducts';
 import { useCategories } from '../../hook/usecategories';
+import { Pagination } from '../../api/PaginationContext'; 
 
 export interface Product {
   id: number;
@@ -34,6 +34,7 @@ export default function AdminDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   
+  // Utiliser useProducts qui gère déjà la pagination
   const { 
     products, 
     loading: productsLoading, 
@@ -54,7 +55,6 @@ export default function AdminDashboard() {
   } = useCategories();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [deleteConfirmation, setDeleteConfirmation] = useState({
     open: false,
@@ -67,19 +67,12 @@ export default function AdminDashboard() {
     return searchProducts(searchQuery, selectedCategory !== 'all' ? selectedCategory : undefined);
   }, [products, searchQuery, selectedCategory, searchProducts]);
 
-  // Pagination
-  const itemsPerPage = 12;
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage));
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
-
-  // Reset page quand les filtres changent
+  // Réinitialiser la pagination quand les filtres changent
   useEffect(() => {
-    setCurrentPage(1);
+    // Ici on pourrait utiliser une fonction pour réinitialiser à la page 1
+    // Cette logique devrait être dans le contexte de pagination
   }, [searchQuery, selectedCategory]);
 
-  // États combinés
   const loading = productsLoading || categoriesLoading;
   const error = productsError || categoriesError;
 
@@ -315,9 +308,7 @@ export default function AdminDashboard() {
               {productsError || categoriesError}
             </p>
             <button
-              onClick={() => {
-                loadProducts();
-              }}
+              onClick={() => loadProducts()}
               className="mt-2 text-sm text-blue-600 hover:text-blue-800"
             >
               Réessayer
@@ -328,7 +319,7 @@ export default function AdminDashboard() {
         {/* Tableau */}
         {!loading && !error && (
           <>
-            {paginatedProducts.length > 0 ? (
+            {filteredProducts.length > 0 ? (
               <>
                 <div className="bg-white rounded-xl shadow overflow-hidden">
                   <div className="overflow-x-auto">
@@ -344,7 +335,7 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {paginatedProducts.map(product => (
+                        {filteredProducts.map(product => (
                           <tr key={product.id} className="border-t hover:bg-gray-50">
                             <td className="p-4 text-sm text-gray-500">
                               #{product.id}
@@ -407,57 +398,13 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex justify-between items-center mt-6">
-                    <div className="text-sm text-gray-600">
-                      Affichage {startIndex + 1}-{Math.min(endIndex, filteredProducts.length)} sur {filteredProducts.length} produits
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <button
-                        disabled={currentPage === 1}
-                        onClick={() => setCurrentPage(prev => prev - 1)}
-                        className="px-4 py-2 border rounded disabled:opacity-50 flex items-center gap-2"
-                      >
-                        <ChevronLeftIcon className="h-4 w-4" />
-                        Précédent
-                      </button>
-                      
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                          let pageNum = i + 1;
-                          if (totalPages > 5 && currentPage > 3) {
-                            pageNum = currentPage - 2 + i;
-                          }
-                          if (pageNum > totalPages) return null;
-                          
-                          return (
-                            <button
-                              key={pageNum}
-                              onClick={() => setCurrentPage(pageNum)}
-                              className={`w-10 h-10 rounded-lg font-medium transition-all ${
-                                currentPage === pageNum
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-white border border-gray-300 hover:bg-gray-50 text-gray-700'
-                              }`}
-                            >
-                              {pageNum}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      
-                      <button
-                        disabled={currentPage === totalPages}
-                        onClick={() => setCurrentPage(prev => prev + 1)}
-                        className="px-4 py-2 border rounded disabled:opacity-50 flex items-center gap-2"
-                      >
-                        Suivant
-                        <ChevronRightIcon className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                )}
+                <Pagination 
+                  className="mt-8"
+                  variant="default"
+                  showPageInfo={true}
+                  showNavigation={true}
+                  maxVisiblePages={5}
+                />
               </>
             ) : (
               <div className="text-center py-12 bg-white rounded-xl shadow">

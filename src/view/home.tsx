@@ -94,7 +94,7 @@ const HomePage: React.FC = () => {
       image: "https://images.unsplash.com/photo-1556656793-08538906a9f8?q=80&w=2070&auto=format&fit=crop",
       color: "bg-gradient-to-r from-cyan-600/80 via-blue-700/70 to-blue-900/60",
       buttonText: "Découvrir les marques",
-      badge: "🏆 Élu Meilleur Shop 2024"
+      badge: "🏆 Élu Meilleur Shop 2026"
     }
   ];
 
