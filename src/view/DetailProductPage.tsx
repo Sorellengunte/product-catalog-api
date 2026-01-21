@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { Star, ShoppingBag, Heart, ArrowLeft, Package, Shield, Truck } from 'lucide-react';
+import { Star, ShoppingBag, ArrowLeft, } from 'lucide-react';
 import Navbar from '../components/navBar';
 import Footer from '../components/footer';
 import ProductCard from '../components/productCard';
