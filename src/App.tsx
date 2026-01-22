@@ -6,13 +6,13 @@ import ProductDetailPage from './view/DetailProductPage';
 import Panier from './view/panier';
 import ProfilePage from './view/client/Profile';
 
-import { CartProvider } from './api/CartContext';
+import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './auth/AuthContext';
 import ClientRoute from './auth/ClientRoute';
 import AdminRoute from './auth/AdminRoute';
 import AdminDashboard from './view/admin/AdminDashboard';
 import ProductFormPage from './components/admin/ProductFormPage';
-import { DummyJsonPaginationProvider } from './api/PaginationContext'; 
+import { DummyJsonPaginationProvider } from './context/PaginationContext'; 
 import './App.css';
 
 function App() {

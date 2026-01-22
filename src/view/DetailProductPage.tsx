@@ -4,7 +4,7 @@ import { Star, ShoppingBag, ArrowLeft, } from 'lucide-react';
 import Navbar from '../components/navBar';
 import Footer from '../components/footer';
 import ProductCard from '../components/productCard';
-import { useCart } from '../api/CartContext';
+import { useCart } from '../context/CartContext';
 
 // Type simplifié pour éviter les problèmes de typage
 type ProductType = any;

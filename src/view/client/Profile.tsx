@@ -3,7 +3,7 @@ import Navbar from "../../components/navBar";
 import Footer from "../../components/footer";
 import Button from "../../components/Button";
 import { useAuth } from "../../auth/AuthContext";
-import { useCart } from "../../api/CartContext";
+import { useCart } from "../../context/CartContext";
 import { ShoppingCart, CreditCard, Check } from "lucide-react";
 import { useNavigate } from "react-router";
 

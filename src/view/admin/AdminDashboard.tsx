@@ -1,21 +1,19 @@
 // src/components/AdminDashboard.tsx
 import { useState, useEffect, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
 import {
-  UserCircleIcon,
-  ArrowRightOnRectangleIcon,
   MagnifyingGlassIcon,
   PlusIcon,
   ExclamationTriangleIcon,
-  TrashIcon,
-  HomeIcon,
-  PencilIcon,
-  EyeIcon,
+  Bars3Icon,
+ 
 } from '@heroicons/react/24/outline';
-import { useAuth } from '../../auth/AuthContext';
+
 import { useProducts } from '../../hook/useproducts';
 import { useCategories } from '../../hook/usecategories';
-import { Pagination } from '../../api/PaginationContext'; 
+import { Pagination } from '../../components/pagination';
+import Sidebar from '../../components/Sidebar';
+import ProductsTable from '../../components/admin/ProductsTable';
 
 export interface Product {
   id: number;
@@ -31,16 +29,16 @@ export interface Product {
 }
 
 export default function AdminDashboard() {
-  const { user, logout } = useAuth();
+
   const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   
-  // Utiliser useProducts qui gère déjà la pagination
   const { 
     products, 
     loading: productsLoading, 
     error: productsError, 
     deleteProduct,
-    loadProducts,
+    
     searchProducts,
   } = useProducts();
 
@@ -67,16 +65,21 @@ export default function AdminDashboard() {
     return searchProducts(searchQuery, selectedCategory !== 'all' ? selectedCategory : undefined);
   }, [products, searchQuery, selectedCategory, searchProducts]);
 
-  // Réinitialiser la pagination quand les filtres changent
+  // Fermer sidebar sur mobile quand on change de page
   useEffect(() => {
-    // Ici on pourrait utiliser une fonction pour réinitialiser à la page 1
-    // Cette logique devrait être dans le contexte de pagination
-  }, [searchQuery, selectedCategory]);
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setSidebarOpen(false);
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const loading = productsLoading || categoriesLoading;
   const error = productsError || categoriesError;
 
-  // Notifications
   const showNotification = (type: 'success' | 'error', title: string, message: string) => {
     const id = Date.now();
     setNotifications(prev => [...prev, { id, type, title, message }]);
@@ -86,12 +89,8 @@ export default function AdminDashboard() {
     }, 5000);
   };
 
-  // Modifier un produit
-  const handleEdit = (product: Product) => {
-    navigate(`/admin/products/edit/${product.id}`);
-  };
+  
 
-  // Supprimer un produit
   const handleDelete = (product: Product) => {
     setDeleteConfirmation({
       open: true,
@@ -108,19 +107,40 @@ export default function AdminDashboard() {
     }
   };
 
-  // Couleurs pour le stock
   const getStockColor = (stock: number) => {
     if (stock === 0) return 'bg-red-100 text-red-800';
     if (stock < 10) return 'bg-orange-100 text-orange-800';
     return 'bg-green-100 text-green-800';
   };
 
+  const getCategoryColor = (category: string) => {
+    const colors: Record<string, string> = {
+      smartphones: 'bg-purple-100 text-purple-800',
+      laptops: 'bg-blue-100 text-blue-800',
+      fragrances: 'bg-pink-100 text-pink-800',
+      skincare: 'bg-green-100 text-green-800',
+      groceries: 'bg-yellow-100 text-yellow-800',
+      'home-decoration': 'bg-indigo-100 text-indigo-800',
+    };
+    return colors[category] || 'bg-gray-100 text-gray-800';
+  };
+
   return (
     <div className="min-h-screen flex bg-gray-50">
       {/* Notifications */}
-      <div className="fixed top-6 right-6 z-50 space-y-3">
+      <div className="fixed top-4 right-4 lg:top-6 lg:right-6 z-50 space-y-3 max-w-sm">
         {notifications.map(notif => (
-          <div key={notif.id} className={`p-4 rounded-lg shadow-lg border ${notif.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+          <div 
+            key={notif.id} 
+            className={`
+              p-4 rounded-lg shadow-lg border transition-transform duration-300
+              ${notif.type === 'success' 
+                ? 'bg-green-50 border-green-200 text-green-800' 
+                : 'bg-red-50 border-red-200 text-red-800'
+              }
+              animate-slide-in
+            `}
+          >
             <div className="font-medium">{notif.title}</div>
             <div className="text-sm">{notif.message}</div>
           </div>
@@ -130,26 +150,26 @@ export default function AdminDashboard() {
       {/* Modal suppression */}
       {deleteConfirmation.open && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
             <div className="flex items-start gap-3 mb-4">
-              <ExclamationTriangleIcon className="h-6 w-6 text-red-600 mt-1" />
-              <div>
+              <ExclamationTriangleIcon className="h-6 w-6 text-red-600 mt-1 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
                 <h3 className="font-bold text-lg">Confirmer suppression</h3>
-                <p className="text-gray-600 mt-1">
+                <p className="text-gray-600 mt-1 truncate">
                   Supprimer "<span className="font-medium">{deleteConfirmation.productTitle}</span>" ?
                 </p>
               </div>
             </div>
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-3 mt-6 flex-col sm:flex-row">
               <button
                 onClick={() => setDeleteConfirmation({ open: false, productId: null, productTitle: '' })}
-                className="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+                className="flex-1 py-3 px-4 bg-gray-200 rounded-lg hover:bg-gray-300 font-medium"
               >
                 Annuler
               </button>
               <button
                 onClick={confirmDelete}
-                className="flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                className="flex-1 py-3 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
               >
                 Supprimer
               </button>
@@ -159,285 +179,154 @@ export default function AdminDashboard() {
       )}
 
       {/* Sidebar */}
-      <div className="w-64 bg-blue-800 text-white p-6">
-        <div className="mb-8">
-          <h2 className="text-xl font-bold">Admin Dashboard</h2>
-          <p className="text-blue-200 text-sm">Gestion produits</p>
-        </div>
-        
-        <nav className="space-y-2 mb-8">
-          <Link
-            to="/admin/products/add"
-            className="flex items-center gap-3 p-3 bg-blue-700 rounded-lg"
-          >
-            <PlusIcon className="h-5 w-5" />
-            <span>Ajouter produit</span>
-          </Link>
-          <Link
-            to="/home"
-            className="flex items-center gap-3 p-3 hover:bg-blue-700 rounded-lg"
-          >
-            <HomeIcon className="h-5 w-5" />
-            <span>Retour au site</span>
-          </Link>
-        </nav>
-        
-        <div className="mt-auto pt-6 border-t border-blue-700">
-          <div className="flex items-center gap-3 mb-4">
-            <UserCircleIcon className="h-10 w-10" />
-            <div>
-              <p className="font-medium">{user?.username || 'Admin'}</p>
-              <p className="text-sm text-blue-200">Administrateur</p>
-            </div>
-          </div>
-          
-          <button
-            onClick={logout}
-            className="w-full flex items-center gap-3 p-3 text-red-200 hover:bg-red-900/20 rounded-lg"
-          >
-            <ArrowRightOnRectangleIcon className="h-5 w-5" />
-            <span>Déconnexion</span>
-          </button>
-        </div>
-      </div>
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main content */}
-      <div className="flex-1 p-6">
-        {/* Header */}
-        <header className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Gestion des produits</h1>
-          <p className="text-gray-600">
-            Total: {products.length} produits | 
-            Filtre: {filteredProducts.length} produits
-          </p>
-        </header>
+      <div className="flex-1 min-w-0">
+        {/* Header mobile */}
+        <div className="lg:hidden bg-white border-b p-4 flex items-center justify-between">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 text-gray-600 hover:text-gray-900"
+          >
+            <Bars3Icon className="h-6 w-6" />
+          </button>
+          
+          <h1 className="text-lg font-semibold">Admin Dashboard</h1>
+          
+          <div className="w-10"></div> {/* Spacer for centering */}
+        </div>
 
-        {/* Filtres */}
-        <div className="bg-white rounded-xl p-4 mb-6 shadow">
-          <div className="flex flex-col md:flex-row gap-4">
-            {/* Recherche */}
-            <div className="flex-1 relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Rechercher par nom, marque, catégorie..."
-                className="w-full pl-10 p-3 border rounded-lg"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            
-            {/* Catégorie */}
-            <div className="w-full md:w-64 relative">
-              <select
-                className="w-full p-3 border rounded-lg appearance-none pr-10"
-                value={selectedCategory}
-                onChange={(e) => selectCategory(e.target.value)}
-              >
-                {categories.map(cat => (
-                  <option key={cat} value={cat}>
-                    {formatCategoryName(cat)}
-                  </option>
-                ))}
-              </select>
-              {selectedCategory !== 'all' && (
-                <button
-                  onClick={resetCategory}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
-                  title="Réinitialiser la catégorie"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-            
-            {/* Bouton Ajouter */}
-            <div>
-              <Link
-                to="/admin/products/add"
-                className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
+        {/* Main content */}
+        <div className="p-4 lg:p-6">
+          {/* Header */}
+          <header className="mb-6 lg:mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Gestion des produits</h1>
+                <p className="text-gray-600 mt-1">
+                  Total: {products.length} produits | 
+                  Filtre: {filteredProducts.length} produits
+                </p>
+              </div>
+              
+              {/* Mobile add button */}
+              <button
+                onClick={() => navigate('/admin/products/add')}
+                className="lg:hidden flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 font-medium"
               >
                 <PlusIcon className="h-5 w-5" />
                 Ajouter
-              </Link>
+              </button>
             </div>
-          </div>
-          
-          {/* Indicateurs de filtres actifs */}
-          {(searchQuery || selectedCategory !== 'all') && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {searchQuery && (
-                <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
-                  Recherche: "{searchQuery}"
-                  <button 
-                    onClick={() => setSearchQuery('')}
-                    className="text-blue-600 hover:text-blue-800 ml-1"
-                  >
-                    ✕
-                  </button>
-                </span>
-              )}
-              
-              {selectedCategory !== 'all' && (
-                <span className="inline-flex items-center gap-1 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
-                  Catégorie: {formatCategoryName(selectedCategory)}
-                  <button 
-                    onClick={resetCategory}
-                    className="text-green-600 hover:text-green-800 ml-1"
-                  >
-                    ✕
-                  </button>
-                </span>
-              )}
-            </div>
-          )}
-        </div>
+          </header>
 
-        {/* Loading */}
-        {loading && (
-          <div className="text-center py-12">
-            <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-            <p className="mt-2 text-gray-600">Chargement des produits...</p>
-          </div>
-        )}
-
-        {/* Error */}
-        {error && !loading && (
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r mb-6">
-            <p className="text-red-700">
-              {productsError || categoriesError}
-            </p>
-            <button
-              onClick={() => loadProducts()}
-              className="mt-2 text-sm text-blue-600 hover:text-blue-800"
-            >
-              Réessayer
-            </button>
-          </div>
-        )}
-
-        {/* Tableau */}
-        {!loading && !error && (
-          <>
-            {filteredProducts.length > 0 ? (
-              <>
-                <div className="bg-white rounded-xl shadow overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="p-4 text-left text-sm font-medium text-gray-700">ID</th>
-                          <th className="p-4 text-left text-sm font-medium text-gray-700">Produit</th>
-                          <th className="p-4 text-left text-sm font-medium text-gray-700">Catégorie</th>
-                          <th className="p-4 text-left text-sm font-medium text-gray-700">Stock</th>
-                          <th className="p-4 text-left text-sm font-medium text-gray-700">Prix</th>
-                          <th className="p-4 text-left text-sm font-medium text-gray-700">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredProducts.map(product => (
-                          <tr key={product.id} className="border-t hover:bg-gray-50">
-                            <td className="p-4 text-sm text-gray-500">
-                              #{product.id}
-                              {product.id > 100000 && (
-                                <span className="ml-1 text-xs text-blue-600 bg-blue-100 px-1 rounded">Nouveau</span>
-                              )}
-                            </td>
-                            <td className="p-4">
-                              <div className="flex items-center gap-3">
-                                <img
-                                  src={product.thumbnail || 'https://via.placeholder.com/150'}
-                                  alt={product.title}
-                                  className="w-12 h-12 rounded object-cover"
-                                />
-                                <div>
-                                  <p className="font-medium">{product.title}</p>
-                                  <p className="text-sm text-gray-500">{product.brand || 'Sans marque'}</p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="p-4">
-                              <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                                {formatCategoryName(product.category)}
-                              </span>
-                            </td>
-                            <td className="p-4">
-                              <span className={`px-3 py-1 rounded-full text-sm ${getStockColor(product.stock)}`}>
-                                {product.stock} unités
-                              </span>
-                            </td>
-                            <td className="p-4">
-                              <p className="font-bold">${product.price.toFixed(2)}</p>
-                              {product.discountPercentage && product.discountPercentage > 0 && (
-                                <p className="text-sm text-green-600">-{product.discountPercentage}%</p>
-                              )}
-                            </td>
-                            <td className="p-4">
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => handleEdit(product)}
-                                  className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 flex items-center gap-1"
-                                >
-                                  <PencilIcon className="h-4 w-4" />
-                                  Modifier
-                                </button>
-                                <button
-                                  onClick={() => handleDelete(product)}
-                                  className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 flex items-center gap-1"
-                                >
-                                  <TrashIcon className="h-4 w-4" />
-                                  Supprimer
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Pagination */}
-                <Pagination 
-                  className="mt-8"
-                  variant="default"
-                  showPageInfo={true}
-                  showNavigation={true}
-                  maxVisiblePages={5}
+          {/* Filtres */}
+          <div className="bg-white rounded-xl p-4 lg:p-6 mb-6 shadow">
+            <div className="flex flex-col lg:flex-row gap-4">
+              {/* Recherche */}
+              <div className="flex-1 relative">
+                <MagnifyingGlassIcon className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Rechercher par nom, marque, catégorie..."
+                  className="w-full pl-10 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
-              </>
-            ) : (
-              <div className="text-center py-12 bg-white rounded-xl shadow">
-                <EyeIcon className="h-12 w-12 text-gray-400 mx-auto" />
-                <h3 className="mt-4 text-lg font-medium">Aucun produit trouvé</h3>
-                <p className="text-gray-600 mt-1">
-                  {searchQuery || selectedCategory !== 'all' 
-                    ? 'Aucun résultat pour ces filtres' 
-                    : 'Ajoutez votre premier produit'}
-                </p>
-                {(searchQuery || selectedCategory !== 'all') && (
+              </div>
+              
+              {/* Catégorie */}
+              <div className="w-full lg:w-64 relative">
+                <select
+                  className="w-full p-3 border rounded-lg appearance-none pr-10 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                  value={selectedCategory}
+                  onChange={(e) => selectCategory(e.target.value)}
+                >
+                  {categories.map(cat => (
+                    <option key={cat} value={cat}>
+                      {formatCategoryName(cat)}
+                    </option>
+                  ))}
+                </select>
+                {selectedCategory !== 'all' && (
                   <button
-                    onClick={() => {
-                      setSearchQuery('');
-                      resetCategory();
-                    }}
-                    className="mt-4 inline-block bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700"
+                    onClick={resetCategory}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                    title="Réinitialiser la catégorie"
                   >
-                    Réinitialiser les filtres
+                    ✕
                   </button>
                 )}
-                {!searchQuery && selectedCategory === 'all' && (
-                  <Link
-                    to="/admin/products/add"
-                    className="mt-4 inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-                  >
-                    Ajouter un produit
-                  </Link>
+              </div>
+              
+              {/* Bouton Ajouter desktop */}
+              <div className="hidden lg:block">
+                <button
+                  onClick={() => navigate('/admin/products/add')}
+                  className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-medium"
+                >
+                  <PlusIcon className="h-5 w-5" />
+                  Ajouter
+                </button>
+              </div>
+            </div>
+            
+            {/* Indicateurs de filtres actifs */}
+            {(searchQuery || selectedCategory !== 'all') && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {searchQuery && (
+                  <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-3 py-2 rounded-full text-sm">
+                    Recherche: "{searchQuery}"
+                    <button 
+                      onClick={() => setSearchQuery('')}
+                      className="text-blue-600 hover:text-blue-800 ml-1"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                )}
+                
+                {selectedCategory !== 'all' && (
+                  <span className="inline-flex items-center gap-1 bg-green-100 text-green-800 px-3 py-2 rounded-full text-sm">
+                    Catégorie: {formatCategoryName(selectedCategory)}
+                    <button 
+                      onClick={resetCategory}
+                      className="text-green-600 hover:text-green-800 ml-1"
+                    >
+                      ✕
+                    </button>
+                  </span>
                 )}
               </div>
             )}
-          </>
-        )}
+          </div>
+
+          {/* Tableau */}
+          <ProductsTable
+            products={filteredProducts}
+            loading={loading}
+            error={error}
+            currentPage={1} // À remplacer par votre logique de pagination
+            totalPages={Math.ceil(filteredProducts.length / 10)}
+            getStockColor={getStockColor}
+            getCategoryColor={getCategoryColor}
+            onDelete={handleDelete}
+          />
+
+          {/* Pagination */}
+          {!loading && !error && filteredProducts.length > 0 && (
+            <div className="mt-6 lg:mt-8">
+              <Pagination 
+                className=""
+                variant="default"
+                showPageInfo={true}
+                showNavigation={true}
+                maxVisiblePages={3}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

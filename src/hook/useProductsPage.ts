@@ -1,6 +1,6 @@
 // src/hooks/useProductsPage.ts
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useDummyJsonPagination } from '../api/PaginationContext';
+import { useDummyJsonPagination } from '../context/PaginationContext';
 import { 
   loadProductsFromStorage, 
   saveProductsToStorage 

@@ -29,8 +29,7 @@ export default function ProductsTable({
   products,
   loading,
   error,
-  currentPage,
-  totalPages,
+ 
   getStockColor,
   getCategoryColor,
 
@@ -70,7 +69,7 @@ export default function ProductsTable({
       <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold text-gray-900">Produits ({products.length})</h3>
-          <span className="text-sm text-gray-500">Page {currentPage} sur {totalPages}</span>
+          
         </div>
       </div>
 

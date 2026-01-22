@@ -1,12 +1,13 @@
+// src/components/navBar.tsx
 import React, { useState } from 'react';
 import { Link } from 'react-router';
 import { HomeIcon, ShoppingCartIcon, UserIcon, Bars3Icon, XMarkIcon,ShoppingBagIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
-import { useCart } from '../api/CartContext';
+import { useCart } from '../context/CartContext'; // Corrige le chemin
 import { useAuth } from '../auth/AuthContext';
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { cartCount } = useCart(); 
+  const { cartCount } = useCart(); // cartCount = nombre de produits uniques
   const { user, logout } = useAuth();
 
   const menuItems = [
@@ -50,12 +51,12 @@ const Navbar: React.FC = () => {
               <div className="relative">
                 <ShoppingCartIcon className="w-5 h-5" />
                 {cartCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-bounce">
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center ">
                     {cartCount}
                   </span>
                 )}
               </div>
-              <span>Panier</span>
+              <span>Panier ({cartCount})</span>
             </Link>
 
             {/* User Section */}
@@ -113,7 +114,7 @@ const Navbar: React.FC = () => {
             
             <Link 
               to="/panier" 
-              className="flex items-center justify-between px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200"
+              className="flex items-center justify-between px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600"
               onClick={() => setIsMenuOpen(false)}
             >
               <div className="flex items-center gap-3">
@@ -121,7 +122,7 @@ const Navbar: React.FC = () => {
                 <span>Panier</span>
               </div>
               {cartCount > 0 && (
-                <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 animate-bounce">
+                <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] h-5 flex items-center justify-center">
                   {cartCount}
                 </span>
               )}

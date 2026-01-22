@@ -4,7 +4,7 @@ import {
   loadProductsFromStorage, 
   saveProductsToStorage
 } from '../utils/productStorage';
-import { useDummyJsonPagination } from '../api/PaginationContext';
+import { useDummyJsonPagination } from '../context/PaginationContext';
 
 export interface Product {
   id: number;

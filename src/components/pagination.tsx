@@ -1,147 +1,6 @@
-import React, { createContext, useContext, useState, useMemo } from 'react';
-import type { ReactNode } from 'react';
+import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-
-
-export interface DummyJsonResponse<T> {
-  products: T[];
-  total: number;
-  skip: number;
-  limit: number;
-}
-
-export interface DummyJsonPaginationContextType {
-  
-  currentPage: number;
-  itemsPerPage: number;
-  totalItems: number;
-  totalPages: number;
-  
- 
-  apiParams: {
-    limit: number;
-    skip: number;
-  };
-  goToPage: (page: number) => void;
-  goToNextPage: () => void;
-  goToPreviousPage: () => void;
-  goToFirstPage: () => void;
-  goToLastPage: () => void;
-  updateFromApiResponse: (response: DummyJsonResponse<any>) => void;
-  getQueryString: () => string;
-  getUrlWithPagination: (baseUrl: string) => string;
-}
-
-interface DummyJsonPaginationProviderProps {
-  children: ReactNode;
-  initialPage?: number;
-  initialItemsPerPage?: number;
-}
-
-const DummyJsonPaginationContext = createContext<DummyJsonPaginationContextType | null>(null);
-
-export const useDummyJsonPagination = () => {
-  const context = useContext(DummyJsonPaginationContext);
-  if (!context) {
-    throw new Error('useDummyJsonPagination must be used within a DummyJsonPaginationProvider');
-  }
-  return context;
-};
-
-export const DummyJsonPaginationProvider: React.FC<DummyJsonPaginationProviderProps> = ({
-  children,
-  initialPage = 1,
-  initialItemsPerPage = 10,
-}) => {
-  const [currentPage, setCurrentPage] = useState(initialPage);
-  const [itemsPerPage] = useState(initialItemsPerPage);
-  const [totalItems, setTotalItems] = useState(0);
-
-  // Calculs avec useMemo
-  const totalPages = useMemo(() => {
-    return Math.ceil(totalItems / itemsPerPage) || 1;
-  }, [totalItems, itemsPerPage]);
-
-  const skip = useMemo(() => {
-    return (currentPage - 1) * itemsPerPage;
-  }, [currentPage, itemsPerPage]);
-
-  
-  const apiParams = useMemo(() => ({
-    limit: itemsPerPage,
-    skip,
-  }), [itemsPerPage, skip]);
-
-  // Fonctions de navigation 
-  const goToPage = (page: number) => {
-    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
-  };
-
-  const goToNextPage = () => {
-    setCurrentPage(prev => Math.min(prev + 1, totalPages));
-  };
-
-  const goToPreviousPage = () => {
-    setCurrentPage(prev => Math.max(prev - 1, 1));
-  };
-
-  const goToFirstPage = () => {
-    setCurrentPage(1);
-  };
-
-  const goToLastPage = () => {
-    setCurrentPage(totalPages);
-  };
-
- 
-  const updateFromApiResponse = (response: DummyJsonResponse<any>) => {
-    setTotalItems(response.total);
-    
-    const newTotalPages = Math.ceil(response.total / itemsPerPage) || 1;
-    if (currentPage > newTotalPages) {
-      setCurrentPage(newTotalPages);
-    }
-  };
-
- 
-  const getQueryString = () => {
-    return `?limit=${itemsPerPage}&skip=${skip}`;
-  };
-
-  const getUrlWithPagination = (baseUrl: string) => {
-    return `${baseUrl}?limit=${itemsPerPage}&skip=${skip}`;
-  };
-
-  const value: DummyJsonPaginationContextType = useMemo(() => ({
-    currentPage,
-    itemsPerPage,
-    totalItems,
-    totalPages,
-    apiParams,
-    goToPage,
-    goToNextPage,
-    goToPreviousPage,
-    goToFirstPage,
-    goToLastPage,
-    updateFromApiResponse,
-    getQueryString,
-    getUrlWithPagination,
-  }), [
-    currentPage,
-    itemsPerPage,
-    totalItems,
-    totalPages,
-    apiParams,
-    skip, 
-  ]);
-
-  return (
-    <DummyJsonPaginationContext.Provider value={value}>
-      {children}
-    </DummyJsonPaginationContext.Provider>
-  );
-};
-
+import { useDummyJsonPagination } from '../context/PaginationContext';
 
 interface PaginationProps {
   className?: string;
@@ -151,7 +10,6 @@ interface PaginationProps {
   maxVisiblePages?: number;
 }
 
-// Composant de pagination 
 export const Pagination: React.FC<PaginationProps> = ({
   className = '',
   showPageInfo = true,
@@ -159,8 +17,6 @@ export const Pagination: React.FC<PaginationProps> = ({
   variant = 'default',
   maxVisiblePages = 5,
 }) => {
-  const context = useDummyJsonPagination();
-  
   const {
     currentPage,
     totalPages,
@@ -169,43 +25,35 @@ export const Pagination: React.FC<PaginationProps> = ({
     goToPage,
     goToFirstPage,
     goToLastPage,
-  } = context;
+  } = useDummyJsonPagination();
 
-  // Générer les pages visibles 
-  const visiblePages = useMemo(() => {
-    if (variant === 'minimal' || variant === 'compact') {
-      return [currentPage];
-    }
-
-    const pages: number[] = [];
+  let visiblePages: number[] = [];
+  
+  if (variant === 'minimal' || variant === 'compact') {
+    visiblePages = [currentPage];
+  } else {
     const half = Math.floor(maxVisiblePages / 2);
     
     let start = Math.max(1, currentPage - half);
     let end = Math.min(totalPages, start + maxVisiblePages - 1);
     
-    // Ajuster si on est trop près de la fin
     if (end === totalPages) {
       start = Math.max(1, totalPages - maxVisiblePages + 1);
     }
     
-    // Ajuster si on est trop près du début
     if (start === 1) {
       end = Math.min(totalPages, maxVisiblePages);
     }
     
     for (let i = start; i <= end; i++) {
-      if (i <= totalPages) pages.push(i);
+      if (i <= totalPages) visiblePages.push(i);
     }
-    
-    return pages;
-  }, [currentPage, totalPages, maxVisiblePages, variant]);
+  }
 
-  // Si une seule page, ne pas afficher la pagination
   if (totalPages <= 1) {
     return null;
   }
 
-  // Variant minimal (juste les flèches)
   if (variant === 'minimal') {
     return (
       <div className={`flex items-center justify-center gap-2 ${className}`}>
@@ -236,7 +84,6 @@ export const Pagination: React.FC<PaginationProps> = ({
     );
   }
 
-  // Variant compact
   if (variant === 'compact') {
     return (
       <div className={`flex flex-col sm:flex-row items-center justify-between gap-3 ${className}`}>
@@ -291,7 +138,6 @@ export const Pagination: React.FC<PaginationProps> = ({
     );
   }
 
-  // Variant par défaut (complet)
   return (
     <div className={`flex flex-col sm:flex-row items-center justify-between gap-4 py-4 ${className}`}>
       {showPageInfo && (
@@ -303,14 +149,7 @@ export const Pagination: React.FC<PaginationProps> = ({
       <div className="flex items-center gap-1 md:gap-2">
         {showNavigation && (
           <>
-            <button
-              onClick={goToFirstPage}
-              disabled={currentPage === 1}
-              className="hidden sm:inline-flex p-2 rounded-lg border border-gray-200 hover:border-gray-900 hover:text-gray-900 disabled:opacity-50 transition-colors text-sm"
-              aria-label="Première page"
-            >
-            
-            </button>
+           
             
             <button
               onClick={goToPreviousPage}
@@ -365,14 +204,7 @@ export const Pagination: React.FC<PaginationProps> = ({
               <ChevronRight className="w-5 h-5" />
             </button>
             
-            <button
-              onClick={goToLastPage}
-              disabled={currentPage === totalPages}
-              className="hidden sm:inline-flex p-2 rounded-lg border border-gray-200 hover:border-gray-900 hover:text-gray-900 disabled:opacity-50 transition-colors text-sm"
-              aria-label="Dernière page"
-            >
-              
-            </button>
+           
           </>
         )}
       </div>
