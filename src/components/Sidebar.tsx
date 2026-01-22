@@ -88,7 +88,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
             className="flex items-center gap-3 p-3 hover:bg-blue-700 rounded-lg transition-colors"
           >
             <HomeIcon className="h-5 w-5" />
-            <span>Retour au site</span>
+            <span>Retour</span>
           </Link>
         </nav>
 
