@@ -4,9 +4,10 @@ import Footer from '../components/footer';
 import ProductCard from '../components/productCard';
 import { Search, Filter } from 'lucide-react';
 import { useProductsPage } from '../hook/useProductsPage';
-import { useCart } from '../api/CartContext';
+import { useCart } from '../context/CartContext';
 import { useCategories } from '../hook/usecategories';
-import { useDummyJsonPagination, Pagination } from '../api/PaginationContext';
+import { useDummyJsonPagination } from '../context/PaginationContext';
+import { Pagination } from '../components/pagination'; 
 
 interface Product {
   id: number;
@@ -190,12 +191,7 @@ const ProductsPage: React.FC = () => {
                   </span>
                 </p>
                 
-                {/* Points décoratifs */}
-                <div className="flex gap-3 mt-8">
-                  <div className="w-3 h-3 rounded-full bg-blue-300 animate-pulse"></div>
-                  <div className="w-3 h-3 rounded-full bg-blue-200 animate-pulse delay-150"></div>
-                  <div className="w-3 h-3 rounded-full bg-blue-100 animate-pulse delay-300"></div>
-                </div>
+               
               </div>
             </div>
           </div>

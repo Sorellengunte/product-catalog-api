@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import Navbar from '../components/navBar';
 import Footer from '../components/footer';
-import { useCart } from '../api/CartContext'; 
+import { useCart } from '../context/CartContext'; 
 import { useAuth } from '../auth/AuthContext'; // Import du contexte d'authentification
 import { Trash2, Plus, Minus, ArrowLeft, ShoppingCart, CreditCard, Check } from 'lucide-react';
 

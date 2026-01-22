@@ -8,7 +8,7 @@ export interface CartItem {
   price: number;
   thumbnail: string;
   quantity: number;
-  stock?: number; // Ajout optionnel pour vérifier le stock
+  stock?: number; 
 }
 
 interface CartContextType {
@@ -18,19 +18,19 @@ interface CartContextType {
   updateQuantity: (id: number, quantity: number) => void;
   clearCart: () => void;
   getTotalPrice: () => number;
-  cartCount: number;
+  cartCount: number; // Nombre d'articles uniques dans le panier
+  totalItems: number; // Somme de toutes les quantités (nouveau)
   isInCart: (id: number) => boolean;
   getItemQuantity: (id: number) => number;
   incrementQuantity: (id: number) => void;
   decrementQuantity: (id: number) => void;
+  notification: { message: string; type: 'info' | 'success' } | null;
 }
 
 const CartContext = createContext<CartContextType | null>(null);
 
-// Clé pour le localStorage
 const CART_STORAGE_KEY = "shopping_cart";
 
-// Fonction pour charger le panier depuis localStorage
 const loadCartFromStorage = (): CartItem[] => {
   if (typeof window === "undefined") return [];
   
@@ -38,7 +38,7 @@ const loadCartFromStorage = (): CartItem[] => {
     const storedCart = localStorage.getItem(CART_STORAGE_KEY);
     if (storedCart) {
       const parsedCart = JSON.parse(storedCart);
-      console.log("📦 Panier chargé depuis localStorage:", parsedCart.length, "produits");
+      console.log("Panier chargé depuis localStorage:", parsedCart.length, "produits");
       return parsedCart;
     }
   } catch (error) {
@@ -48,7 +48,6 @@ const loadCartFromStorage = (): CartItem[] => {
   return [];
 };
 
-// Fonction pour sauvegarder le panier dans localStorage
 const saveCartToStorage = (cart: CartItem[]): void => {
   if (typeof window === "undefined") return;
   
@@ -67,19 +66,25 @@ export const useCart = () => {
 };
 
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Charger le panier depuis localStorage au démarrage
   const [cart, setCart] = useState<CartItem[]>(() => loadCartFromStorage());
+  const [notification, setNotification] = useState<{ message: string; type: 'info' | 'success' } | null>(null);
   
   // Sauvegarder le panier dans localStorage à chaque modification
   useEffect(() => {
     saveCartToStorage(cart);
   }, [cart]);
 
+  // Fonction pour afficher une notification
+  const showNotification = (message: string, type: 'info' | 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
+
   const addToCart = (product: Omit<CartItem, "quantity">, quantity: number = 1) => {
     console.log("🛒 Ajout au panier:", product.id, product.title, "quantité:", quantity);
     
     setCart((prevCart) => {
-      // Rechercher si le produit existe déjà (comparaison stricte par ID)
+      // Rechercher si le produit existe déjà
       const existingIndex = prevCart.findIndex((item) => item.id === product.id);
       
       if (existingIndex >= 0) {
@@ -89,24 +94,29 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           ...newCart[existingIndex],
           quantity: newCart[existingIndex].quantity + quantity
         };
+        
+        showNotification(
+          `"${product.title}" quantité augmentée à ${newCart[existingIndex].quantity}`,
+          'info'
+        );
+        
         console.log("Produit existant, nouvelle quantité:", newCart[existingIndex].quantity);
         return newCart;
       } else {
         // Produit pas encore dans le panier : ajouter
-        const newCart = [...prevCart, { ...product, quantity }];
-        console.log("➕ Nouveau produit ajouté");
-        return newCart;
+        showNotification(`"${product.title}" a été ajouté à votre panier !`, 'success');
+        return [...prevCart, { ...product, quantity }];
       }
     });
   };
 
   const removeFromCart = (id: number) => {
-    console.log("🗑️ Suppression du produit:", id);
+    console.log(" Suppression du produit:", id);
     setCart((prevCart) => prevCart.filter((item) => item.id !== id));
   };
 
   const updateQuantity = (id: number, quantity: number) => {
-    console.log("📊 Mise à jour quantité:", id, "→", quantity);
+    console.log("Mise à jour quantité:", id, "→", quantity);
     
     if (quantity < 1) {
       removeFromCart(id);
@@ -134,7 +144,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (item.id === id) {
           const newQuantity = item.quantity - 1;
           if (newQuantity < 1) {
-            return item; // On pourrait supprimer ici, mais laissons à l'utilisateur le choix
+            removeFromCart(id);
+            return item;
           }
           return { ...item, quantity: newQuantity };
         }
@@ -144,7 +155,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const clearCart = () => {
-    console.log("🧹 Panier vidé");
+    console.log(" Panier vidé");
     setCart([]);
   };
 
@@ -153,7 +164,11 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return parseFloat(total.toFixed(2));
   };
 
-  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  // Nombre de produits UNIQUES dans le panier (pour le badge navbar)
+  const cartCount = cart.length;
+  
+  // Somme de toutes les quantités (pour affichage ailleurs si besoin)
+  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   
   const isInCart = (id: number): boolean => {
     return cart.some(item => item.id === id);
@@ -173,11 +188,13 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         updateQuantity,
         clearCart,
         getTotalPrice,
-        cartCount,
+        cartCount, // Renvoie le nombre d'articles uniques
+        totalItems, // Renvoie la somme des quantités
         isInCart,
         getItemQuantity,
         incrementQuantity,
         decrementQuantity,
+        notification
       }}
     >
       {children}

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router';
 import { ChevronLeft, ChevronRight, Plus, Star, ShoppingBag, } from 'lucide-react';
 import Navbar from '../components/navBar';
 import Footer from '../components/footer';
-import { useCart } from '../api/CartContext';
+import { useCart } from '../context/CartContext';
 
 interface Product {
   id: number;
