@@ -5,7 +5,7 @@ import {
   PlusIcon,
   HomeIcon,
   ChartBarIcon,
-  Cog6ToothIcon,
+ 
   ShoppingBagIcon,
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../auth/AuthContext';
