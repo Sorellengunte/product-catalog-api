@@ -1,13 +1,12 @@
-// src/components/navBar.tsx
 import React, { useState } from 'react';
 import { Link } from 'react-router';
 import { HomeIcon, ShoppingCartIcon, UserIcon, Bars3Icon, XMarkIcon,ShoppingBagIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
-import { useCart } from '../context/CartContext'; // Corrige le chemin
+import { useCart } from '../context/CartContext';
 import { useAuth } from '../auth/AuthContext';
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { cartCount } = useCart(); // cartCount = nombre de produits uniques
+  const { cartCount } = useCart(); //  nombre de produits uniques
   const { user, logout } = useAuth();
 
   const menuItems = [

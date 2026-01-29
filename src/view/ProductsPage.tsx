@@ -41,14 +41,9 @@ const ProductsPage: React.FC = () => {
     error, 
     searchQuery, 
     setSearchQuery, 
-    // Supprimé: currentPage, setCurrentPage, totalPages car gérés par le contexte
-    reloadProducts, // Ajouté pour recharger les produits
   } = useProductsPage();
   
   const { 
-    currentPage,
-    
-    // Les fonctions de pagination sont déjà incluses dans le composant Pagination
   } = useDummyJsonPagination();
   
   const { categories, selectedCategory, selectCategory, resetCategory } = useCategories();
@@ -58,16 +53,12 @@ const ProductsPage: React.FC = () => {
   const [showNotification, setShowNotification] = useState(false);
   const [addedProduct, setAddedProduct] = useState('');
 
-  // Synchroniser la recherche locale avec le hook
   useEffect(() => {
     const timer = setTimeout(() => setSearchQuery(localSearch), 300);
     return () => clearTimeout(timer);
   }, [localSearch, setSearchQuery]);
 
-  // Recharger les produits quand la page change
-  useEffect(() => {
-    reloadProducts();
-  }, [currentPage, reloadProducts]);
+ 
 
   const handleAddToCart = (product: Product, quantity: number) => {
     addToCart(product, quantity);

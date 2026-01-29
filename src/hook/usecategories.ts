@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 
+
 export const useCategories = () => {
   const [categories, setCategories] = useState<string[]>(['all']);
   const [loading, setLoading] = useState(true);
@@ -20,8 +21,7 @@ export const useCategories = () => {
       
       const data = await response.json();
       
-      // DummyJSON retourne un tableau de strings directement
-      // Exemple: ["smartphones", "laptops", "fragrances", ...]
+      
       const categoryList = data;
       
       // S'assurer que ce sont bien des strings
@@ -34,9 +34,9 @@ export const useCategories = () => {
           return String(cat);
         })
         .filter((cat: string) => cat && cat.trim() !== '')
-        .sort(); // Trier alphabétiquement
+        .sort(); 
       
-      // Ajouter "all" au début
+      
       setCategories(['all', ...validCategories]);
       setError(null);
       
@@ -76,7 +76,7 @@ export const useCategories = () => {
     if (!category || category.trim() === '') return '';
     if (category === 'all') return 'Toutes catégories';
     
-    // Convertir "smartphones" en "Smartphones", "womens-dresses" en "Women's Dresses"
+    // Convertir 
     return category
       .replace(/-/g, ' ')
       .split(' ')
