@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+// src/hooks/admin/useProducts.ts
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { loadProductsFromStorage, saveProductsToStorage } from '../utils/productStorage';
 import { useDummyJsonPagination } from '../context/PaginationContext';
 import apiService from '../api/apiservice';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 export interface Product {
   id: number;
@@ -25,426 +27,251 @@ interface ApiResponse {
 }
 
 export const useProducts = () => {
+  const queryClient = useQueryClient();
   const [localProducts, setLocalProducts] = useState<Product[]>([]);
-  const [apiProducts, setApiProducts] = useState<Product[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>(['all']);
-
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  
   const pagination = useDummyJsonPagination();
 
-  // ==================== CHARGEMENT PRODUITS ====================
-  const loadProducts = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // 1. Charger les produits locaux
-      const loadedLocalProducts = loadProductsFromStorage();
-      const sortedLocalProducts = loadedLocalProducts.sort((a, b) => b.id - a.id);
-      setLocalProducts(sortedLocalProducts);
-
-      // 2. Récupérer les produits depuis l'API
-      const params: Record<string, string> = {
-        limit: String(pagination.itemsPerPage),
-        skip: String((pagination.currentPage - 1) * pagination.itemsPerPage),
-      };
-
-      // Appel API avec gestion du type
-      const result = await apiService.get<ApiResponse>('products', params);
-      if (!result) {
-        throw new Error('Aucune réponse de l\'API');
-      }
-
-      // Transformation des produits API
-      const apiProductsData = (result.products || []).map(p => ({
-        id: p.id,
-        title: p.title,
-        price: p.price,
-        stock: p.stock || 0,
-        category: p.category || 'Uncategorized',
-        thumbnail: p.thumbnail || '',
-        brand: p.brand,
-        rating: p.rating,
-        discountPercentage: p.discountPercentage,
-        description: p.description,
-      })).sort((a, b) => a.id - b.id);
-
-      setApiProducts(apiProductsData);
-
-      // 3. Combiner les produits (locaux d'abord)
-      setAllProducts([...sortedLocalProducts, ...apiProductsData]);
-
-      // 4. Charger les catégories si disponibles
-      if (result.categories && Array.isArray(result.categories)) {
-        const apiCategories = result.categories.filter(cat => 
-          typeof cat === 'string' && cat.trim() !== ''
-        );
-        const localCategories = [...new Set(sortedLocalProducts.map(p => p.category))];
-        const allCategories = ['all', ...new Set([...apiCategories, ...localCategories])];
-        setCategories(allCategories.sort((a, b) => a.localeCompare(b)));
-      } else {
-        // Fallback: charger les catégories séparément
-        loadCategories();
-      }
-
-      // 5. Mettre à jour la pagination
-      if (pagination.updateFromApiResponse) {
-        pagination.updateFromApiResponse({
-          products: apiProductsData,
-          total: result.total,
-          skip: result.skip,
-          limit: result.limit,
+  // 1. Récupérer TOUS les produits API avec TanStack Query
+  const { 
+    data: apiProductsData = [], 
+    isLoading: apiLoading,
+    isFetching: apiFetching,
+    error: apiError,
+    refetch: refetchApiProducts 
+  } = useQuery({
+    queryKey: ['products', 'all'],
+    queryFn: async (): Promise<Product[]> => {
+      try {
+        // Pour DummyJSON, on récupère tout en une seule requête
+        const result = await apiService.get<ApiResponse>('products', {
+          limit: '100', // Maximum de DummyJSON
+          skip: '0'
         });
+        
+        return (result.products || []).map(p => ({
+          id: p.id,
+          title: p.title,
+          price: p.price,
+          stock: p.stock || 0,
+          category: p.category || 'Uncategorized',
+          thumbnail: p.thumbnail || '',
+          brand: p.brand,
+          rating: p.rating,
+          discountPercentage: p.discountPercentage,
+          description: p.description,
+        }));
+      } catch (error) {
+        console.error('Erreur API:', error);
+        return [];
       }
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 30, // 30 minutes
+  });
 
-    } catch (err: any) {
-      console.error('Erreur chargement:', err);
-      setError(err.message || 'Erreur de chargement des produits');
+  // 2. Charger les produits locaux
+  useEffect(() => {
+    const loadedLocalProducts = loadProductsFromStorage();
+    const sortedLocalProducts = loadedLocalProducts.sort((a, b) => b.id - a.id);
+    setLocalProducts(sortedLocalProducts);
+  }, []);
 
-      // Utiliser uniquement les produits locaux en cas d'erreur
-      const loadedLocalProducts = loadProductsFromStorage();
-      setAllProducts(loadedLocalProducts.sort((a, b) => b.id - a.id));
-      setApiProducts([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [pagination.currentPage, pagination.itemsPerPage]);
-
-  // ==================== CHARGEMENT CATÉGORIES ====================
-  const loadCategories = useCallback(async () => {
-    try {
-      // Appel API pour les catégories
-      const categoriesResult = await apiService.get<string[]>('products/categories');
-      
-      if (!categoriesResult) {
-        throw new Error('Aucune réponse pour les catégories');
-      }
-
-      let apiCategories: string[] = [];
-      
-      if (Array.isArray(categoriesResult)) {
-        apiCategories = categoriesResult;
-      }
-
-      // Filtrer et nettoyer
-      apiCategories = apiCategories.filter(
-        (cat): cat is string => typeof cat === 'string' && cat.trim() !== ''
-      );
-
-      const localCats = localProducts
-        .map(p => p.category)
-        .filter((cat): cat is string => Boolean(cat && cat.trim()));
-
-      const uniqueCategories = ['all', ...new Set([...apiCategories, ...localCats])]
-        .filter(Boolean)
-        .sort((a, b) => a.localeCompare(b));
-
-      setCategories(uniqueCategories);
-
-    } catch (error) {
-      console.error('Erreur chargement catégories:', error);
-      
-      const localCats = localProducts
-        .map(p => p.category)
-        .filter((cat): cat is string => Boolean(cat && cat.trim()));
-      
-      const uniqueLocalCats = ['all', ...new Set(localCats)]
-        .filter(Boolean)
-        .sort((a, b) => a.localeCompare(b));
-      
-      setCategories(uniqueLocalCats);
-    }
-  }, [localProducts]);
-
-  // ==================== CRUD API ====================
-
-  // POST - Créer un produit sur l'API
-  const createProductOnApi = useCallback(async (productData: Omit<Product, 'id'>) => {
-    try {
-      setLoading(true);
-      
-      // Appel API POST
-      const createdResult = await apiService.post<Product>('products/add', productData);
-      
-      if (!createdResult) {
-        throw new Error('Échec de la création du produit');
-      }
-      
-      // Ajouter aussi en local pour cohérence
-      const maxId = Math.max(0, ...allProducts.map(p => p.id));
-      const localProduct: Product = { ...productData, id: maxId + 1 };
-      
-      const updatedLocal = [localProduct, ...localProducts];
-      setLocalProducts(updatedLocal);
-      saveProductsToStorage(updatedLocal);
-      
-      setAllProducts(prev => [localProduct, ...prev]);
-      
-      // Recharger les catégories
-      loadCategories();
-      
-      return createdResult;
-    } catch (err: any) {
-      setError(err.message || 'Erreur création produit');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [allProducts, localProducts, loadCategories]);
-
-  // PUT - Mettre à jour complètement un produit sur l'API
-  const updateProductOnApi = useCallback(async (id: number, productData: Product) => {
-    try {
-      setLoading(true);
-      
-      // Appel API PUT
-      const updatedResult = await apiService.put<Product>(`products/${id}`, productData);
-      
-      if (!updatedResult) {
-        throw new Error('Échec de la mise à jour du produit');
-      }
-      
-      // Mettre à jour aussi la version locale si c'est un produit local
-      const updatedLocal = localProducts.map(p => 
-        p.id === id ? { ...productData, id } : p
-      );
-      
-      setLocalProducts(updatedLocal);
-      saveProductsToStorage(updatedLocal);
-      
-      setAllProducts(prev => prev.map(p => 
-        p.id === id ? { ...productData, id } : p
-      ));
-      
-      return updatedResult;
-    } catch (err: any) {
-      setError(err.message || 'Erreur mise à jour produit');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [localProducts]);
-
-  // PATCH - Mettre à jour partiellement un produit sur l'API
-  const patchProductOnApi = useCallback(async (id: number, partialData: Partial<Product>) => {
-    try {
-      setLoading(true);
-      
-      // Appel API PATCH
-      const patchedResult = await apiService.patch<Product>(`products/${id}`, partialData);
-      
-      if (!patchedResult) {
-        throw new Error('Échec de la modification du produit');
-      }
-      
-      // Mettre à jour aussi la version locale
-      const updatedLocal = localProducts.map(p => 
-        p.id === id ? { ...p, ...partialData } : p
-      );
-      
-      setLocalProducts(updatedLocal);
-      saveProductsToStorage(updatedLocal);
-      
-      setAllProducts(prev => prev.map(p => 
-        p.id === id ? { ...p, ...partialData } : p
-      ));
-      
-      return patchedResult;
-    } catch (err: any) {
-      setError(err.message || 'Erreur modification produit');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [localProducts]);
-
-  // DELETE - Supprimer un produit de l'API
-  const deleteProductFromApi = useCallback(async (id: number) => {
-    try {
-      setLoading(true);
-      
-      // Appel API DELETE
-      const deleteResult = await apiService.delete<{ id: number; deleted: boolean }>(`products/${id}`);
-      
-      if (!deleteResult) {
-        throw new Error('Échec de la suppression du produit');
-      }
-      
-      // Supprimer aussi de la liste locale
-      const updatedLocal = localProducts.filter(p => p.id !== id);
-      setLocalProducts(updatedLocal);
-      saveProductsToStorage(updatedLocal);
-      
-      setAllProducts(prev => prev.filter(p => p.id !== id));
-      
-      // Recharger les produits API
-      await loadProducts();
-      
-      return deleteResult;
-    } catch (err: any) {
-      setError(err.message || 'Erreur suppression produit');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [localProducts, loadProducts]);
-
-  // GET avec recherche sur l'API
-  const searchProductsOnApi = useCallback(async (query: string) => {
-    try {
-      setLoading(true);
-      
-      // Appel API GET avec recherche
-      const searchResult = await apiService.get<ApiResponse>('products/search', {
-        q: query,
-        limit: String(pagination.itemsPerPage),
-        skip: String((pagination.currentPage - 1) * pagination.itemsPerPage),
+  // 3. Fusionner tous les produits
+  useEffect(() => {
+    const all = [...localProducts, ...apiProductsData];
+    setAllProducts(all);
+    
+    // Mettre à jour la pagination
+    if (pagination.updateFromApiResponse) {
+      pagination.updateFromApiResponse({
+        products: apiProductsData,
+        total: apiProductsData.length,
+        skip: 0,
+        limit: apiProductsData.length,
       });
-      
-      if (!searchResult) {
-        throw new Error('Aucun résultat de recherche');
-      }
-      
-      const products: Product[] = (searchResult.products || []).map(p => ({
-        id: p.id,
-        title: p.title,
-        price: p.price,
-        stock: p.stock || 0,
-        category: p.category || 'Uncategorized',
-        thumbnail: p.thumbnail || '',
-        brand: p.brand,
-        rating: p.rating,
-        discountPercentage: p.discountPercentage,
-        description: p.description,
-      }));
-      
-      setApiProducts(products);
-      
-      if (pagination.updateFromApiResponse) {
-        pagination.updateFromApiResponse({
-          products,
-          total: searchResult.total || 0,
-          skip: searchResult.skip || 0,
-          limit: searchResult.limit || pagination.itemsPerPage,
-        });
-      }
-      
-      return products;
-    } catch (err: any) {
-      setError(err.message || 'Erreur recherche produits');
-      return [];
-    } finally {
-      setLoading(false);
     }
-  }, [pagination.currentPage, pagination.itemsPerPage]);
+  }, [apiProductsData, localProducts, pagination]);
 
-  // ==================== CRUD LOCAL ====================
-  const addProduct = useCallback((productData: Omit<Product, 'id'>) => {
-    const maxId = Math.max(0, ...allProducts.map(p => p.id));
-    const newProduct: Product = { ...productData, id: maxId + 1 };
-
-    const updatedLocalProducts = [newProduct, ...localProducts];
-    setLocalProducts(updatedLocalProducts);
-    saveProductsToStorage(updatedLocalProducts);
-
-    setAllProducts(prev => [newProduct, ...prev]);
+  // 4. Charger les catégories
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const categoriesResult = await apiService.get<string[]>('products/categories');
+        const apiCategories = Array.isArray(categoriesResult) ? categoriesResult : [];
+        
+        const localCats = localProducts
+          .map(p => p.category)
+          .filter((cat): cat is string => Boolean(cat && cat.trim()));
+        
+        const uniqueCategories = ['all', ...new Set([...apiCategories, ...localCats])]
+          .filter(Boolean)
+          .sort((a, b) => a.localeCompare(b));
+        
+        setCategories(uniqueCategories);
+      } catch (error) {
+        console.error('Erreur chargement catégories:', error);
+        const localCats = localProducts
+          .map(p => p.category)
+          .filter((cat): cat is string => Boolean(cat && cat.trim()));
+        
+        const uniqueLocalCats = ['all', ...new Set(localCats)]
+          .filter(Boolean)
+          .sort((a, b) => a.localeCompare(b));
+        
+        setCategories(uniqueLocalCats);
+      }
+    };
     
-    // Mettre à jour les catégories
     loadCategories();
-    
-    return newProduct;
-  }, [allProducts, localProducts, loadCategories]);
-
-  const editProduct = useCallback((updatedProduct: Product) => {
-    const updatedLocalProducts = localProducts.map(p => 
-      p.id === updatedProduct.id ? updatedProduct : p
-    );
-    setLocalProducts(updatedLocalProducts);
-    saveProductsToStorage(updatedLocalProducts);
-
-    setAllProducts(prev => prev.map(p => 
-      p.id === updatedProduct.id ? updatedProduct : p
-    ));
-    
-    return updatedProduct;
   }, [localProducts]);
 
-  const deleteProduct = useCallback((id: number) => {
-    const updatedLocalProducts = localProducts.filter(p => p.id !== id);
-    setLocalProducts(updatedLocalProducts);
-    saveProductsToStorage(updatedLocalProducts);
+  // 5. Fonction pour supprimer un produit (corrigée)
+  const deleteProduct = useCallback((productId: number) => {
+    return new Promise<void>((resolve) => {
+      if (productId > 1000) {
+        // Produit local
+        const updatedLocal = localProducts.filter(p => p.id !== productId);
+        setLocalProducts(updatedLocal);
+        saveProductsToStorage(updatedLocal);
+        
+        // Mettre à jour allProducts immédiatement
+        setAllProducts(prev => prev.filter(p => p.id !== productId));
+      } else {
+        // Produit API - simulation
+        console.log(`Suppression API simulée: ${productId}`);
+        
+        // Filtrer le produit API des données locales (simulation)
+        setAllProducts(prev => prev.filter(p => p.id !== productId));
+      }
+      
+      // Invalider le cache pour forcer un rechargement
+      queryClient.invalidateQueries({ queryKey: ['products', 'all'] });
+      resolve();
+    });
+  }, [localProducts, queryClient]);
 
-    setAllProducts(prev => prev.filter(p => p.id !== id));
-    
-    // Mettre à jour les catégories
-    loadCategories();
-  }, [localProducts, loadCategories]);
+  // 6. Mutation pour supprimer (version optimisée)
+  const deleteMutation = useMutation({
+    mutationFn: deleteProduct,
+    onSuccess: () => {
+      // Recharger les catégories après suppression
+      queryClient.invalidateQueries({ queryKey: ['admin', 'categories', 'all'] });
+    },
+  });
 
-  // ==================== FILTRAGE & PAGINATION ====================
+  // 7. Fonction de recherche/filtrage
   const searchProducts = useCallback((query: string, category?: string) => {
-    const searchTerm = query?.toLowerCase().trim() || '';
-    return allProducts.filter(p => {
-      if (category && category !== 'all' && p.category.toLowerCase() !== category.toLowerCase()) 
-        return false;
-      if (!searchTerm) return true;
-      return p.title.toLowerCase().includes(searchTerm)
-        || p.brand?.toLowerCase().includes(searchTerm)
-        || p.category.toLowerCase().includes(searchTerm)
-        || p.description?.toLowerCase().includes(searchTerm);
+    return allProducts.filter(product => {
+      // Filtre par catégorie
+      if (category && category !== 'all') {
+        if (product.category.toLowerCase() !== category.toLowerCase()) {
+          return false;
+        }
+      }
+      
+      // Filtre par recherche
+      if (query.trim()) {
+        const q = query.toLowerCase();
+        return (
+          product.title.toLowerCase().includes(q) ||
+          (product.brand?.toLowerCase().includes(q) ?? false) ||
+          product.category.toLowerCase().includes(q) ||
+          product.description?.toLowerCase().includes(q)
+        );
+      }
+      
+      return true;
     });
   }, [allProducts]);
 
-  const getPaginatedProducts = useCallback(() => {
-    const itemsPerPage = pagination.itemsPerPage;
-    const startIndex = (pagination.currentPage - 1) * itemsPerPage;
-    return allProducts.slice(startIndex, startIndex + itemsPerPage);
-  }, [allProducts, pagination.currentPage, pagination.itemsPerPage]);
-
-  // Charger au démarrage et quand la page change
-  useEffect(() => {
-    loadProducts();
-  }, [loadProducts]);
-
-  useEffect(() => {
-    loadCategories();
-  }, [loadCategories]);
+  // 8. Produits filtrés
+  const filteredProducts = useMemo(() => {
+    return searchProducts(searchQuery, selectedCategory !== 'all' ? selectedCategory : undefined);
+  }, [searchProducts, searchQuery, selectedCategory]);
 
   return {
-    products: allProducts,
-    localProducts,
-    apiProducts,
-    paginatedProducts: getPaginatedProducts(),
-    loading,
-    error,
+    // Données complètes
+    allProducts: filteredProducts, // Tous les produits filtrés
+    products: filteredProducts, // Alias pour compatibilité
+    rawAllProducts: allProducts, // Tous les produits sans filtrage
+    
+    // États
+    loading: apiLoading,
+    isFetching: apiFetching,
+    error: apiError ? (apiError as Error).message : null,
+    
+    // Catégories
     categories,
+    
+    // Recherche et filtres
+    searchQuery,
+    setSearchQuery,
+    selectedCategory,
+    setSelectedCategory,
+    searchProducts,
+    
+    // Pagination (pour compatibilité)
     currentPage: pagination.currentPage,
     totalPages: pagination.totalPages,
     itemsPerPage: pagination.itemsPerPage,
-    
-    // CRUD local
-    addProduct,
-    editProduct,
-    deleteProduct,
-    
-    // CRUD API
-    createProductOnApi,
-    updateProductOnApi,
-    patchProductOnApi,
-    deleteProductFromApi,
-    searchProductsOnApi,
-    
-    // Recherche et pagination
-    searchProducts,
-    loadProducts,
-    loadCategories,
-    
-    // Navigation pagination
     goToPage: pagination.goToPage,
     goToNextPage: pagination.goToNextPage,
     goToPreviousPage: pagination.goToPreviousPage,
     goToFirstPage: pagination.goToFirstPage,
     goToLastPage: pagination.goToLastPage,
+    
+    // Actions - CORRIGÉ : passer directement la fonction
+    deleteProduct: deleteProduct, // Passe la fonction directement, pas la mutation
+    handleDeleteProduct: (product: Product) => {
+      if (window.confirm(`Voulez-vous vraiment supprimer "${product.title}" ?`)) {
+        deleteProduct(product.id);
+      }
+    },
+    
+    // Pour les mutations si besoin ailleurs
+    deleteMutation,
+    
+    // Autres actions
+    addProduct: useCallback((productData: Omit<Product, 'id'>) => {
+      const maxId = Math.max(0, ...allProducts.map(p => p.id));
+      const newProduct: Product = { ...productData, id: maxId + 1 };
+      
+      const updatedLocal = [newProduct, ...localProducts];
+      setLocalProducts(updatedLocal);
+      saveProductsToStorage(updatedLocal);
+      
+      // Mettre à jour allProducts
+      setAllProducts(prev => [newProduct, ...prev]);
+      
+      return newProduct;
+    }, [allProducts, localProducts]),
+    
+    editProduct: useCallback((updatedProduct: Product) => {
+      const updatedLocal = localProducts.map(p =>
+        p.id === updatedProduct.id ? updatedProduct : p
+      );
+      setLocalProducts(updatedLocal);
+      saveProductsToStorage(updatedLocal);
+      
+      // Mettre à jour allProducts
+      setAllProducts(prev => prev.map(p =>
+        p.id === updatedProduct.id ? updatedProduct : p
+      ));
+      
+      return updatedProduct;
+    }, [localProducts]),
+    
+    // Rechargement
+    refetchApiProducts,
+    
+    // Statistiques
+    localProductsCount: localProducts.length,
+    apiProductsCount: apiProductsData.length,
+    totalProducts: filteredProducts.length,
   };
 };

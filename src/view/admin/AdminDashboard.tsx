@@ -11,7 +11,6 @@ import {
 
 import { useProducts } from '../../hook/useproducts';
 import { useCategories } from '../../hook/usecategories';
-import { Pagination } from '../../components/pagination';
 import Sidebar from '../../components/Sidebar';
 import ProductsTable from '../../components/admin/ProductsTable';
 
@@ -204,73 +203,19 @@ export default function AdminDashboard() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Gestion des produits</h1>
-                <p className="text-gray-600 mt-1">
+                {/* <p className="text-gray-600 mt-1">
                   Total: {products.length} produits | 
                   Filtre: {filteredProducts.length} produits
-                </p>
+                </p> */}
               </div>
               
-              {/* Mobile add button */}
-              <button
-                onClick={() => navigate('/admin/products/add')}
-                className="lg:hidden flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 font-medium"
-              >
-                <PlusIcon className="h-5 w-5" />
-                Ajouter
-              </button>
+             
             </div>
           </header>
 
           {/* Filtres */}
-          <div className="bg-white rounded-xl p-4 lg:p-6 mb-6 shadow">
-            <div className="flex flex-col lg:flex-row gap-4">
-              {/* Recherche */}
-              <div className="flex-1 relative">
-                <MagnifyingGlassIcon className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Rechercher par nom, marque, catégorie..."
-                  className="w-full pl-10 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              
-              {/* Catégorie */}
-              <div className="w-full lg:w-64 relative">
-                <select
-                  className="w-full p-3 border rounded-lg appearance-none pr-10 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                  value={selectedCategory}
-                  onChange={(e) => selectCategory(e.target.value)}
-                >
-                  {categories.map(cat => (
-                    <option key={cat} value={cat}>
-                      {formatCategoryName(cat)}
-                    </option>
-                  ))}
-                </select>
-                {selectedCategory !== 'all' && (
-                  <button
-                    onClick={resetCategory}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
-                    title="Réinitialiser la catégorie"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-              
-              {/* Bouton Ajouter desktop */}
-              <div className="hidden lg:block">
-                <button
-                  onClick={() => navigate('/admin/products/add')}
-                  className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-medium"
-                >
-                  <PlusIcon className="h-5 w-5" />
-                  Ajouter
-                </button>
-              </div>
-            </div>
+          <div>
+            
             
             {/* Indicateurs de filtres actifs */}
             {(searchQuery || selectedCategory !== 'all') && (
@@ -307,25 +252,14 @@ export default function AdminDashboard() {
             products={filteredProducts}
             loading={loading}
             error={error}
-            currentPage={1} // À remplacer par votre logique de pagination
-            totalPages={Math.ceil(filteredProducts.length / 10)}
+            
+            
             getStockColor={getStockColor}
             getCategoryColor={getCategoryColor}
             onDelete={handleDelete}
           />
 
-          {/* Pagination */}
-          {!loading && !error && filteredProducts.length > 0 && (
-            <div className="mt-6 lg:mt-8">
-              <Pagination 
-                className=""
-                variant="default"
-                showPageInfo={true}
-                showNavigation={true}
-                maxVisiblePages={3}
-              />
-            </div>
-          )}
+       
         </div>
       </div>
     </div>

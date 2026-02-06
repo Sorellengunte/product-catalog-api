@@ -1,6 +1,6 @@
-import React from 'react';
-import { Link } from 'react-router';
-import { Star, ShoppingBag, Eye } from 'lucide-react';
+import React from "react";
+import { Link } from "react-router";
+import { Star, ShoppingBag, Eye, Loader2 } from "lucide-react";
 
 interface ProductCardProps {
   product: {
@@ -18,9 +18,14 @@ interface ProductCardProps {
     product: { id: number; title: string; price: number; thumbnail: string },
     quantity: number
   ) => void;
+  isLoading?: boolean; // ✅ AJOUT
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, addToCart }) => {
+const ProductCard: React.FC<ProductCardProps> = ({
+  product,
+  addToCart,
+  isLoading = false,
+}) => {
   const discountedPrice = (
     product.price * (1 - product.discountPercentage / 100)
   ).toFixed(2);
@@ -28,7 +33,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, addToCart }) => {
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (addToCart) {
+    if (addToCart && !isLoading) {
       addToCart(
         {
           id: product.id,
@@ -44,6 +49,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, addToCart }) => {
   return (
     <div
       className="
+        relative
         bg-white
         rounded-xl
         shadow-sm
@@ -59,13 +65,22 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, addToCart }) => {
         active:scale-[0.98]
       "
     >
+      {/* ==================== LOADING OVERLAY ==================== */}
+      {isLoading && (
+        <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-20 rounded-xl">
+          <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+        </div>
+      )}
+
       {/* Image */}
       <div className="relative aspect-square bg-gray-100 overflow-hidden rounded-t-xl">
         <Link to={`/product/${product.id}`}>
           <img
             src={product.thumbnail}
             alt={product.title}
-            className="w-full h-full object-cover"
+            className={`w-full h-full object-cover ${
+              isLoading ? "opacity-60" : ""
+            }`}
           />
         </Link>
 
@@ -80,11 +95,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, addToCart }) => {
         <span
           className={`absolute top-2 right-2 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
             product.stock > 0
-              ? 'bg-green-100 text-green-700'
-              : 'bg-red-100 text-red-700'
+              ? "bg-green-100 text-green-700"
+              : "bg-red-100 text-red-700"
           }`}
         >
-          {product.stock > 0 ? 'Stock' : 'Rupture'}
+          {product.stock > 0 ? "Stock" : "Rupture"}
         </span>
       </div>
 
@@ -144,6 +159,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, addToCart }) => {
               hover:bg-gray-200
               w-full
               sm:w-1/2
+              disabled:opacity-60
             "
           >
             <Eye className="w-4 h-4" />
@@ -154,6 +170,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, addToCart }) => {
           {addToCart && product.stock > 0 && (
             <button
               onClick={handleAddToCart}
+              disabled={isLoading}
               className="
                 flex
                 items-center
@@ -166,6 +183,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, addToCart }) => {
                 text-xs
                 font-semibold
                 hover:bg-blue-600
+                disabled:bg-gray-300
                 w-full
                 sm:w-1/2
               "
